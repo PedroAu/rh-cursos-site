@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildAgendaEventJsonLd, getPublicCourseName, organizationJsonLd } from "@/lib/seo";
+import { buildAgendaEventJsonLd, getCourseMetaDescription, getPublicCourseName, organizationJsonLd } from "@/lib/seo";
 import type { Course, TrainingClass } from "@/types";
 
 const course: Course = {
@@ -92,6 +92,27 @@ describe("SEO de cursos", () => {
     );
     expect(getPublicCourseName("Curso de Completo de Departamento Pessoal")).toBe(
       "Curso Completo de Departamento Pessoal"
+    );
+  });
+
+  it("mantém descrições de resultado concisas para os cursos priorizados por visibilidade em IA", () => {
+    const planningCourse = {
+      ...course,
+      title: "Planejamento da Contratação: ETP, TR, Matriz de Riscos e Plano de Fiscalização",
+      shortDescription:
+        "Curso prático para elaboração de ETP, Termo de Referência, Matriz de Riscos e Plano de Fiscalização."
+    };
+    const payrollAuditCourse = {
+      ...course,
+      title: "Auditoria da Folha de Pagamento",
+      shortDescription: "Audite jornada de trabalho, rubricas, encargos e riscos na folha de pagamento."
+    };
+
+    expect(getCourseMetaDescription(planningCourse)).toBe(
+      "Curso de planejamento da contratação pública: ETP, Termo de Referência, matriz de riscos e plano de fiscalização. Conteúdo prático. Turmas abertas."
+    );
+    expect(getCourseMetaDescription(payrollAuditCourse)).toBe(
+      "Curso de auditoria da folha de pagamento: jornada, rubricas, encargos e riscos trabalhistas. Revisão prática com método. Turmas abertas."
     );
   });
 
