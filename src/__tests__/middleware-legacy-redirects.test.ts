@@ -11,6 +11,10 @@ const redirectCases = [
     "/informa-es-do-evento-e-registro/curso-de-interpretacao-dos-requisitos-da-norma-iso-iec-20000-1-1",
     "/cursos/curso-de-interpretacao-dos-requisitos-da-norma-iso-iec-20000-1/",
   ],
+  [
+    "/informa-es-do-evento-e-registro/curso-intensivo-e-pratico-de-esocial-para-orgaos-publicos-2024-01-24-08-30",
+    "/cursos/curso-de-esocial-pratico-para-orgaos-publicos-atualizado-com-o-novo-leiaute-1-3/",
+  ],
 ] as const;
 
 describe("legacy 404 redirects", () => {
