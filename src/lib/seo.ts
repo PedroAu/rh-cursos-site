@@ -78,6 +78,14 @@ export function getCourseMetaDescription(course: Course) {
     return "Curso completo de Departamento Pessoal para a administração pública: folha do setor celetista com controle, conformidade e precisão. Veja a próxima turma.";
   }
 
+  if (sourceTitle.includes("planejamento da contratação")) {
+    return "Curso de planejamento da contratação pública: ETP, Termo de Referência, matriz de riscos e plano de fiscalização. Conteúdo prático. Turmas abertas.";
+  }
+
+  if (sourceTitle.includes("auditoria da folha de pagamento")) {
+    return "Curso de auditoria da folha de pagamento: jornada, rubricas, encargos e riscos trabalhistas. Revisão prática com método. Turmas abertas.";
+  }
+
   return `${title}: ${expandDepartmentPersonal(course.shortDescription)} Turmas abertas — conheça o conteúdo e garanta sua vaga.`;
 }
 
