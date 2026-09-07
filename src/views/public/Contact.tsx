@@ -13,6 +13,7 @@ import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppStore } from "@/lib/app-store";
+import { trackEvent } from "@/lib/analytics";
 import { company } from "@/lib/company";
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -108,6 +109,7 @@ export function ContactPage() {
         origin: "Contato",
         message: values.message
       });
+      trackEvent("lead_enviado", { origin: "formulario_contato" });
 
       const successMessage = "Mensagem registrada. Nossa equipe retorna com orientação inicial e próximos passos.";
       toast.success("Mensagem registrada para atendimento.");
@@ -152,7 +154,11 @@ export function ContactPage() {
                       <p className="text-label font-bold uppercase tracking-[0.08em] text-tk-brand">{item.title}</p>
                       <p className="mt-2 font-tk-display text-[1.35rem] font-bold tracking-[var(--tk-tracking-display)] text-tk-ink">
                         {"href" in item ? (
-                          <a className="underline decoration-tk-brand/30 underline-offset-4 hover:decoration-tk-brand" href={item.href}>
+                          <a
+                            className="underline decoration-tk-brand/30 underline-offset-4 hover:decoration-tk-brand"
+                            href={item.href}
+                            onClick={() => trackEvent("canal_contato", { channel: "telefone", origin: "pagina_contato" })}
+                          >
                             {item.headline}
                           </a>
                         ) : (
@@ -178,13 +184,21 @@ export function ContactPage() {
 
             <div className="flex flex-wrap gap-3">
               <Button asChild>
-                <a href={company.links.whatsapp} target="_blank" rel="noreferrer">
+                <a
+                  href={company.links.whatsapp}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={() => trackEvent("canal_contato", { channel: "whatsapp", origin: "pagina_contato" })}
+                >
                   <MessageCircle className="h-4 w-4" />
                   WhatsApp
                 </a>
               </Button>
               <Button asChild variant="outline" className="border-outline-variant text-tk-ink hover:bg-surface-muted">
-                <a href={company.links.email}>
+                <a
+                  href={company.links.email}
+                  onClick={() => trackEvent("canal_contato", { channel: "email", origin: "pagina_contato" })}
+                >
                   <Mail className="h-4 w-4" />
                   E-mail
                 </a>

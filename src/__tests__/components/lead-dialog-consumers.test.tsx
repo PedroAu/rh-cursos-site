@@ -120,6 +120,20 @@ describe("consumidores de createLead em diálogo", () => {
     expect(mocks.toastError).toHaveBeenCalledTimes(1);
   });
 
+  it("rastreia a saída para WhatsApp sem dados pessoais", async () => {
+    const user = userEvent.setup();
+
+    render(<WhatsAppSupport />);
+
+    await user.click(screen.getByRole("button", { name: "Abrir atendimento" }));
+    await user.click(await screen.findByRole("link", { name: "Ir para WhatsApp" }));
+
+    expect(mocks.trackEvent).toHaveBeenCalledWith("canal_contato", {
+      channel: "whatsapp",
+      origin: "atendimento_rapido"
+    });
+  });
+
   it("mantém o orçamento aberto com todos os campos e fecha somente após retry bem-sucedido", async () => {
     const user = userEvent.setup();
     mocks.createLead

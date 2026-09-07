@@ -7,7 +7,8 @@ import { ContactPage } from "@/views/public/Contact";
 const mocks = vi.hoisted(() => ({
   createLead: vi.fn(),
   toastSuccess: vi.fn(),
-  toastError: vi.fn()
+  toastError: vi.fn(),
+  trackEvent: vi.fn()
 }));
 
 vi.mock("sonner", () => ({
@@ -23,11 +24,16 @@ vi.mock("@/lib/app-store", () => ({
   })
 }));
 
+vi.mock("@/lib/analytics", () => ({
+  trackEvent: mocks.trackEvent
+}));
+
 describe("ContactPage", () => {
   beforeEach(() => {
     mocks.createLead.mockReset();
     mocks.toastSuccess.mockReset();
     mocks.toastError.mockReset();
+    mocks.trackEvent.mockReset();
   });
 
   it("oferece o telefone principal como link tel para conversão direta", () => {
@@ -50,6 +56,7 @@ describe("ContactPage", () => {
     expect(screen.getByText("Informe um e-mail válido.")).toBeInTheDocument();
     expect(screen.getByText("Mensagem deve ter no mínimo 10 caracteres.")).toBeInTheDocument();
     expect(mocks.createLead).not.toHaveBeenCalled();
+    expect(mocks.trackEvent).not.toHaveBeenCalled();
   });
 
   it("envia o lead com os valores esperados e limpa o formulário", async () => {
@@ -83,6 +90,7 @@ describe("ContactPage", () => {
     expect(mocks.toastSuccess).toHaveBeenCalledTimes(1);
     expect(mocks.toastSuccess).toHaveBeenCalledWith("Mensagem registrada para atendimento.");
     expect(mocks.toastError).not.toHaveBeenCalled();
+    expect(mocks.trackEvent).toHaveBeenCalledWith("lead_enviado", { origin: "formulario_contato" });
     expect(screen.getByLabelText(/nome completo/i)).toHaveValue("");
     expect(screen.getByLabelText(/e-mail/i)).toHaveValue("");
   });
@@ -113,5 +121,29 @@ describe("ContactPage", () => {
     expect(mocks.toastError).toHaveBeenCalledTimes(1);
     expect(mocks.toastError).toHaveBeenCalledWith("Serviço indisponível para contato.");
     expect(mocks.toastSuccess).not.toHaveBeenCalled();
+    expect(mocks.trackEvent).not.toHaveBeenCalled();
+  });
+
+  it("rastreia canais diretos sem incluir dados pessoais", async () => {
+    const user = userEvent.setup();
+
+    render(<ContactPage />);
+
+    await user.click(screen.getByRole("link", { name: "(61) 3965-1929" }));
+    await user.click(screen.getByRole("link", { name: "WhatsApp" }));
+    await user.click(screen.getByRole("link", { name: "E-mail" }));
+
+    expect(mocks.trackEvent).toHaveBeenNthCalledWith(1, "canal_contato", {
+      channel: "telefone",
+      origin: "pagina_contato"
+    });
+    expect(mocks.trackEvent).toHaveBeenNthCalledWith(2, "canal_contato", {
+      channel: "whatsapp",
+      origin: "pagina_contato"
+    });
+    expect(mocks.trackEvent).toHaveBeenNthCalledWith(3, "canal_contato", {
+      channel: "email",
+      origin: "pagina_contato"
+    });
   });
 });

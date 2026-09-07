@@ -134,6 +134,12 @@ export function WhatsAppSupport() {
                 href={company.links.whatsapp}
                 target="_blank"
                 rel="noreferrer"
+                onClick={() =>
+                  trackEvent("canal_contato", {
+                    channel: "whatsapp",
+                    origin: "atendimento_rapido"
+                  })
+                }
               >
                 Ir para WhatsApp
               </a>

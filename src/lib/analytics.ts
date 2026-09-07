@@ -32,7 +32,8 @@ export function hasAnalyticsConsent(): boolean {
 export type FunnelEvent =
   | "inscricao_cta"
   | "lead_enviado"
-  | "checkout_iniciado";
+  | "checkout_iniciado"
+  | "canal_contato";
 
 /**
  * Envia um evento de funil ao GA4. No-op quando o GA está inativo.
