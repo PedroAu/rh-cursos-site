@@ -9,7 +9,7 @@ import {
 
 const CANONICAL_HOST = "www.rhcursos.com.br";
 const APEX_HOST = "rhcursos.com.br";
-// Matches only the four legacy URLs classified as high-confidence 404
+// Matches only the legacy URLs classified as high-confidence 404
 // replacements. Keep this map exact: broad pattern redirects can conceal
 // unrelated content or turn a useful 404 into an incorrect destination.
 const LEGACY_REDIRECTS: Readonly<Record<string, string>> = {
@@ -18,6 +18,8 @@ const LEGACY_REDIRECTS: Readonly<Record<string, string>> = {
   "/especialista": "/falar-com-especialista/",
   "/informa-es-do-evento-e-registro/curso-de-interpretacao-dos-requisitos-da-norma-iso-iec-20000-1-1":
     "/cursos/curso-de-interpretacao-dos-requisitos-da-norma-iso-iec-20000-1/",
+  "/informa-es-do-evento-e-registro/curso-intensivo-e-pratico-de-esocial-para-orgaos-publicos-2024-01-24-08-30":
+    "/cursos/curso-de-esocial-pratico-para-orgaos-publicos-atualizado-com-o-novo-leiaute-1-3/",
 };
 
 export async function middleware(request: NextRequest) {
