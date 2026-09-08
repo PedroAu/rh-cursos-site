@@ -1,13 +1,14 @@
 export const company = {
   brandName: "RH Cursos & Soluções",
-  legalName: "RH Cursos & Soluções LTDA",
+  legalName: "RH Cursos e Soluções LTDA",
   cnpj: "08.703.044/0001-90",
   foundedYear: 2007,
   address: {
-    street: "QS 03 Lote 03/09, Ed. Pátio Capital, Sala 1105",
+    street: "QS 03 Lote 3, Ed. Pátio Capital, Sala 1105",
     district: "Águas Claras",
-    cityState: "Brasília - DF",
-    full: "QS 03 Lote 03/09, Ed. Pátio Capital, Sala 1105, Águas Claras, Brasília - DF"
+    cityState: "Águas Claras - DF",
+    postalCode: "71953-000",
+    full: "QS 03 Lote 3, Ed. Pátio Capital, Sala 1105, Águas Claras - DF, 71953-000"
   },
   phones: {
     primary: "(61) 3965-1929",
@@ -17,7 +18,11 @@ export const company = {
   links: {
     whatsapp: "https://wa.me/5561991129682",
     email: "mailto:info@rhcursos.com.br",
-    maps: "https://www.google.com/maps/search/?api=1&query=Ed.%20P%C3%A1tio%20Capital%2C%20%C3%81guas%20Claras%2C%20Bras%C3%ADlia%20-%20DF"
+    maps: "https://www.google.com/maps/search/RH+Cursos+%C3%81guas+Claras+Bras%C3%ADlia",
+    linkedin: "https://www.linkedin.com/company/rhcursoesolucoes",
+    facebook: "https://www.facebook.com/rhcursostreinamento/",
+    instagram: "https://www.instagram.com/rhcursos/",
+    youtube: "https://www.youtube.com/@rhcursosetreinamentosempre580"
   },
   email: "info@rhcursos.com.br",
   reportedMetrics: {
