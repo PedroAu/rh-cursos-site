@@ -4,6 +4,7 @@ import Image from "next/image";
 import NextLink from "next/link";
 import { usePathname } from "next/navigation";
 
+import { company } from "@/lib/company";
 import { cn } from "@/lib/utils";
 
 const footerColumns = [
@@ -35,6 +36,13 @@ const footerColumns = [
   }
 ] as const;
 
+const socialLinks = [
+  { label: "LinkedIn", href: company.links.linkedin },
+  { label: "Instagram", href: company.links.instagram },
+  { label: "Facebook", href: company.links.facebook },
+  { label: "YouTube", href: company.links.youtube }
+] as const;
+
 function isActive(pathname: string, to: string) {
   return pathname === to || pathname.startsWith(`${to}/`);
 }
@@ -50,12 +58,12 @@ export function PublicFooter() {
           <div>
             <NextLink
               href="/"
-              aria-label="RH Cursos e Treinamentos Empresariais"
+              aria-label="RH Cursos & Soluções"
               className="inline-flex rounded-tk-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tk-focus focus-visible:ring-offset-2"
             >
               <Image
                 src="/images/brand/logo-horizontal.png"
-                alt="RH Cursos e Treinamentos Empresariais"
+                alt="RH Cursos & Soluções"
                 width={453}
                 height={285}
                 className="h-12 w-auto"
@@ -94,6 +102,20 @@ export function PublicFooter() {
             </div>
           ))}
         </div>
+
+        <nav className="flex flex-wrap gap-x-5 gap-y-2 pt-6" aria-label="Perfis oficiais da RH Cursos & Soluções">
+          {socialLinks.map((socialLink) => (
+            <a
+              key={socialLink.href}
+              href={socialLink.href}
+              target="_blank"
+              rel="noreferrer"
+              className="text-[14px] font-medium text-tk-ink transition hover:text-tk-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tk-focus focus-visible:ring-offset-2"
+            >
+              {socialLink.label}
+            </a>
+          ))}
+        </nav>
 
         <p className="pt-6 text-[12px] leading-[1.4] text-tk-ink-muted">
           {isAboutPage

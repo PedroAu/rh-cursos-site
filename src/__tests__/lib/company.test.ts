@@ -8,7 +8,7 @@ describe('Company Configuration', () => {
     });
 
     it('should have correct legal name', () => {
-      expect(company.legalName).toBe('RH Cursos & Soluções LTDA');
+      expect(company.legalName).toBe('RH Cursos e Soluções LTDA');
     });
 
     it('should have correct CNPJ', () => {
@@ -27,7 +27,7 @@ describe('Company Configuration', () => {
 
   describe('Address Information', () => {
     it('should have complete street address', () => {
-      expect(company.address.street).toBe('QS 03 Lote 03/09, Ed. Pátio Capital, Sala 1105');
+      expect(company.address.street).toBe('QS 03 Lote 3, Ed. Pátio Capital, Sala 1105');
     });
 
     it('should have correct district', () => {
@@ -35,12 +35,12 @@ describe('Company Configuration', () => {
     });
 
     it('should have correct city and state', () => {
-      expect(company.address.cityState).toBe('Brasília - DF');
+      expect(company.address.cityState).toBe('Águas Claras - DF');
     });
 
     it('should have complete formatted address', () => {
       expect(company.address.full).toBe(
-        'QS 03 Lote 03/09, Ed. Pátio Capital, Sala 1105, Águas Claras, Brasília - DF'
+        'QS 03 Lote 3, Ed. Pátio Capital, Sala 1105, Águas Claras - DF, 71953-000'
       );
     });
 
@@ -84,6 +84,13 @@ describe('Company Configuration', () => {
 
     it('should have Google Maps link', () => {
       expect(company.links.maps).toContain('https://www.google.com/maps');
+    });
+
+    it('should have the official social profile links', () => {
+      expect(company.links.linkedin).toBe('https://www.linkedin.com/company/rhcursoesolucoes');
+      expect(company.links.facebook).toBe('https://www.facebook.com/rhcursostreinamento/');
+      expect(company.links.instagram).toBe('https://www.instagram.com/rhcursos/');
+      expect(company.links.youtube).toBe('https://www.youtube.com/@rhcursosetreinamentosempre580');
     });
 
     it('should have valid URL formats', () => {
