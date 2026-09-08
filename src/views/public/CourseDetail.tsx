@@ -314,9 +314,9 @@ export function CourseDetailPage() {
   };
 
   const handleProgramPdfRequest = () => {
-    trackEvent("lead_enviado", {
+    trackEvent("inscricao_cta", {
       course: course?.slug ?? "",
-      fallback: "specialist-contact"
+      origin: "program_pdf_request"
     });
     toast.message("Programa completo disponível sob solicitação pelo atendimento especializado.");
     window.location.assign("/falar-com-especialista");

@@ -183,6 +183,25 @@ describe("CourseDetailPage", () => {
     expect(mocks.navigate).toHaveBeenCalledWith("/cursos/curso-teste/checkout?classId=class-1");
   });
 
+  it("classifica a solicitação do programa PDF como CTA, não como lead persistido", async () => {
+    const user = userEvent.setup();
+    mocks.params = new URLSearchParams("");
+    const assignSpy = vi.spyOn(window.location, "assign").mockImplementation(() => undefined);
+
+    render(<CourseDetailPage />);
+
+    await user.click(screen.getByRole("button", { name: /programa pdf/i }));
+
+    expect(mocks.trackEvent).toHaveBeenCalledWith("inscricao_cta", {
+      course: "curso-teste",
+      origin: "program_pdf_request"
+    });
+    expect(mocks.trackEvent).not.toHaveBeenCalledWith("lead_enviado", expect.anything());
+    expect(assignSpy).toHaveBeenCalledWith("/falar-com-especialista");
+
+    assignSpy.mockRestore();
+  });
+
   it("exibe o contador persistido de alunos como prova social", () => {
     mocks.params = new URLSearchParams("");
 
