@@ -3,7 +3,7 @@ import type { MetadataRoute } from "next";
 import { fetchPublicBlogPostsFromSupabaseServer, fetchPublicCatalogFromSupabaseServer } from "@/lib/supabase/rh-cursos-api";
 import { SITE_URL } from "@/lib/seo";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export const staticRoutes = [
   "/",

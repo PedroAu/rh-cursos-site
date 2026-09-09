@@ -1,15 +1,13 @@
-import { cookies } from "next/headers";
 import type { Metadata } from "next";
 
 import { PublicPageShell } from "@/components/next-page-shell";
 import { HomePage } from "@/features/public/home/home-page";
 import {
   fetchPublicCatalogServerState,
-  isServerPublicTestBaselineEnabled,
-  PUBLIC_TEST_BASELINE_COOKIE_NAME
 } from "@/lib/supabase/rh-cursos-api";
+import { getServerPublicTestBaselineEnabled } from "@/lib/public-test-baseline-server";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 const HOME_META_DESCRIPTION =
   "Cursos, treinamentos in company e consultoria em eSocial, Departamento Pessoal e licitações para órgãos públicos e empresas. Desde 2007, em todo o Brasil.";
@@ -27,10 +25,7 @@ export const metadata: Metadata = {
 };
 
 export default async function Page() {
-  const cookieStore = await cookies();
-  const usePublicTestBaseline = isServerPublicTestBaselineEnabled(
-    cookieStore.get(PUBLIC_TEST_BASELINE_COOKIE_NAME)?.value
-  );
+  const usePublicTestBaseline = await getServerPublicTestBaselineEnabled();
   const catalogState = await fetchPublicCatalogServerState(usePublicTestBaseline);
 
   if (catalogState.status === "unavailable") {
