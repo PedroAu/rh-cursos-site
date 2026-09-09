@@ -1,15 +1,13 @@
-import { cookies } from "next/headers";
 import type { Metadata } from "next";
 
 import { PublicPageShell } from "@/components/next-page-shell";
 import { AboutPage } from "@/features/public/about/about-page";
 import {
   fetchPublicCatalogServerState,
-  isServerPublicTestBaselineEnabled,
-  PUBLIC_TEST_BASELINE_COOKIE_NAME
 } from "@/lib/supabase/rh-cursos-api";
+import { getServerPublicTestBaselineEnabled } from "@/lib/public-test-baseline-server";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: "Quem Somos — RH Cursos & Soluções, desde 2007 em Brasília | RH Cursos",
@@ -25,10 +23,7 @@ export const metadata: Metadata = {
 };
 
 export default async function Page() {
-  const cookieStore = await cookies();
-  const usePublicTestBaseline = isServerPublicTestBaselineEnabled(
-    cookieStore.get(PUBLIC_TEST_BASELINE_COOKIE_NAME)?.value
-  );
+  const usePublicTestBaseline = await getServerPublicTestBaselineEnabled();
   const catalogState = await fetchPublicCatalogServerState(usePublicTestBaseline);
 
   if (catalogState.status === "unavailable") {

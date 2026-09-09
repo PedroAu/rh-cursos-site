@@ -1,31 +1,31 @@
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 
 import { CourseDetailClient } from "@/components/page-clients/course-detail-client";
 import {
   fetchPublicCatalogServerState,
   fetchPublicTestimonialsFromSupabaseServer,
-  isServerPublicTestBaselineEnabled,
-  PUBLIC_TEST_BASELINE_COOKIE_NAME
 } from "@/lib/supabase/rh-cursos-api";
+import { getServerPublicTestBaselineEnabled } from "@/lib/public-test-baseline-server";
 import { buildCourseJsonLd, getCourseMetaDescription, getPublicCourseName, SITE_URL } from "@/lib/seo";
 
-// Renderização dinâmica: o catálogo é editado via admin e precisa refletir o
-// estado real do banco a cada request, sem "assar" cursos/turmas em páginas
-// estáticas geradas em build (ver Story 16.1, AC7 — corretude > performance
-// de build, dado que não há cache/ISR no projeto).
-export const dynamic = "force-dynamic";
+// Catálogo e turmas são revalidados a cada cinco minutos. Isso preserva a
+// atualização operacional sem impor renderização SSR completa a cada visita.
+export const revalidate = 300;
 
 type PageProps = {
   params: Promise<{ slug: string }>;
 };
 
+// Pré-renderiza os cursos publicados no build e os mantém em ISR. Novos
+// slugs ainda podem ser atendidos pelo fallback padrão até a revalidação.
+export async function generateStaticParams() {
+  const courses = await getCourses(false);
+  return courses?.map((course) => ({ slug: course.slug })) ?? [];
+}
+
 async function getPublicTestBaselineEnabled() {
-  const cookieStore = await cookies();
-  return isServerPublicTestBaselineEnabled(
-    cookieStore.get(PUBLIC_TEST_BASELINE_COOKIE_NAME)?.value
-  );
+  return getServerPublicTestBaselineEnabled();
 }
 
 async function getCourses(usePublicTestBaseline: boolean) {
