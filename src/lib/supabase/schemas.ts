@@ -136,10 +136,18 @@ export const blogPostSchema = z.object({
   autor: z.string(),
   publicado_em: z.string().nullable(),
   tempo_leitura: z.string().nullable(),
-  status: z.enum(["Rascunho", "Publicado", "Arquivado"]),
+  status: z.enum(["Rascunho", "Em revisão", "Agendado", "Publicado", "Arquivado"]),
   imagem_url: z.string().nullable(),
   curso_id: z.string().nullable(),
-  created_at: z.string()
+  created_at: z.string(),
+  agendado_em: z.string().nullable().optional(),
+  conteudo_formato: z.enum(["plain", "markdown"]).optional(),
+  imagem_alt: z.string().nullable().optional(),
+  seo_titulo: z.string().nullable().optional(),
+  seo_descricao: z.string().nullable().optional(),
+  canonical_url: z.string().nullable().optional(),
+  og_image_url: z.string().nullable().optional(),
+  revisao_atual: z.number().optional()
 });
 
 export const blogPostListSchema = z.array(blogPostSchema);

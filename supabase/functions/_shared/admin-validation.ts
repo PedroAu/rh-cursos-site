@@ -173,19 +173,34 @@ export const blogPostSchema = z.object({
     "Compliance",
     "Departamento Pessoal",
     "eSocial",
+    "Folha de Pagamento",
     "Gestão Pública",
     "Liderança",
     "Tecnologia",
     "Assédio e Compliance",
   ]),
   author: z.string().min(1, "Autor é obrigatório"),
-  status: z.enum(["Rascunho", "Publicado", "Arquivado"]),
+  status: z.enum(["Rascunho", "Em revisão", "Agendado", "Publicado", "Arquivado"]),
   summary: z.string().min(20, "Resumo deve ter pelo menos 20 caracteres"),
   content: z.string().min(100, "Conteúdo deve ter pelo menos 100 caracteres"),
   image: z.string().optional(),
+  imageAlt: z.string().max(240, "Texto alternativo não pode ter mais de 240 caracteres").optional(),
   tags: z.array(z.string()).optional(),
   readingTime: z.string().optional(),
   relatedCourseId: z.string().optional(),
+  contentFormat: z.enum(["plain", "markdown"]).optional(),
+  scheduledAt: z.string().datetime({ offset: true }).nullable().optional(),
+  seoTitle: z.string().max(240, "Título SEO não pode ter mais de 240 caracteres").optional(),
+  seoDescription: z.string().max(320, "Descrição SEO não pode ter mais de 320 caracteres").optional(),
+  canonicalUrl: z.union([z.literal(""), z.string().url("URL canônica inválida")]).optional(),
+  ogImageUrl: z.union([z.literal(""), z.string().url("URL Open Graph inválida")]).optional(),
+}).strict();
+
+// Autosave accepts incomplete editorial content. Database defaults keep the
+// NOT NULL legacy columns valid until the operator completes publication data.
+export const blogDraftSchema = blogPostSchema.extend({
+  summary: z.string().max(5000).default(""),
+  content: z.string().max(100000).default(""),
 }).strict();
 
 export const leadStatusUpdateSchema = z.object({

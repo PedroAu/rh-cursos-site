@@ -1,5 +1,5 @@
-import { AdminResourcePage } from "@/features/admin/resources/admin-resource-page";
+import { AdminBlogPage } from "@/features/admin/blog/admin-blog-page";
 
 export default function Page() {
-  return <AdminResourcePage resource="blog" />;
+  return <AdminBlogPage />;
 }

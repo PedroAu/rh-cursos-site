@@ -402,6 +402,13 @@ export function validateBlogPost(form: Record<string, unknown>): ValidationResul
     addError(errors, "content", "Conteúdo é obrigatório");
   } else if (str(form.content).length < 100) {
     addError(errors, "content", "Conteúdo deve ter pelo menos 100 caracteres");
+  } else if (/<\s*script\b|javascript:/i.test(str(form.content))) {
+    addError(errors, "content", "Conteúdo contém um trecho não permitido");
+  }
+
+  addMaxLengthError(errors, "seoTitle", form.seoTitle, "Título SEO");
+  if (str(form.seoDescription).length > 320) {
+    addError(errors, "seoDescription", "Descrição SEO não pode ter mais de 320 caracteres");
   }
 
   return {

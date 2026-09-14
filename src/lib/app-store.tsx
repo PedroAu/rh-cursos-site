@@ -21,7 +21,7 @@ import { supabase, isSupabaseConfigured } from "@/lib/supabase/client";
 import { invokeFunction, isFunctionsConfigured, getStableClientIp } from "@/lib/supabase/functions-client";
 import { SESSION_REFRESH_THRESHOLD_MS } from "@/lib/auth-session";
 import * as rhCursosApi from "@/lib/supabase/rh-cursos-api";
-import { mapLead, type LeadRow } from "@/lib/supabase/mappers";
+import { mapBlogPost, mapLead, type BlogPostRow, type LeadRow } from "@/lib/supabase/mappers";
 import { enrollmentReceiptSchema } from "@/lib/validation";
 import type {
   BlogPost,
@@ -34,7 +34,7 @@ import type {
   TrainingClass
 } from "@/types";
 
-import { AdminStoreContext, type AdminStoreValue } from "@/lib/contexts/admin-context";
+import { AdminStoreContext, type AdminStoreValue, type BlogTransitionAction } from "@/lib/contexts/admin-context";
 import { CourseStoreContext, type CourseStoreValue } from "@/lib/contexts/course-context";
 import { SessionStoreContext, type SessionStoreValue } from "@/lib/contexts/session-context";
 import { StudentStoreContext, type StudentStoreValue } from "@/lib/contexts/student-context";
@@ -75,6 +75,9 @@ type AdminMutation =
       action: "upsert";
       payload: unknown;
     }
+  | { resource: "blog"; action: "save-draft"; payload: unknown }
+  | { resource: "blog"; action: "save-content"; payload: unknown }
+  | { resource: "blog"; action: BlogTransitionAction; id: string; scheduledAt?: string }
   | {
       resource: "students" | "enrollments";
       action: "create";
@@ -483,6 +486,19 @@ async function fetchAdminLeads(): Promise<Lead[]> {
   return Array.isArray(payload?.data) ? payload.data.map(mapLead) : [];
 }
 
+async function fetchAdminBlogPosts(): Promise<BlogPost[]> {
+  const response = await invokeFunction("admin-resources", {
+    body: { resource: "blog", action: "list" },
+  });
+
+  if (!response.ok) {
+    throw new Error(await getFunctionErrorMessage(response, "Não foi possível carregar os posts do blog."));
+  }
+
+  const payload = (await response.json().catch(() => null)) as { data?: BlogPostRow[] } | null;
+  return Array.isArray(payload?.data) ? payload.data.map(mapBlogPost) : [];
+}
+
 /**
  * Follow-up REC-204 (item 6 do post-mortem REC-502): token efêmero de realtime.
  *
@@ -706,6 +722,32 @@ export function AppStoreProvider({
   }, [state.currentSession?.role]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (state.currentSession?.role !== "admin") return;
+    // O catálogo editorial só precisa ser hidratado quando o administrador
+    // está dentro do módulo de blog. Evita uma chamada BFF em todas as telas
+    // administrativas e mantém o bootstrap das demais áreas determinístico.
+    if (!window.location.pathname.startsWith("/admin/blog")) return;
+
+    let active = true;
+    const hydrateAdminBlog = async () => {
+      try {
+        const blogPosts = await fetchAdminBlogPosts();
+        if (active) setState((current) => ({ ...current, blogPosts }));
+      } catch (error) {
+        if (active) console.error("Falha ao carregar posts administrativos:", error);
+      }
+    };
+
+    void hydrateAdminBlog();
+    window.addEventListener("focus", hydrateAdminBlog);
+    return () => {
+      active = false;
+      window.removeEventListener("focus", hydrateAdminBlog);
+    };
+  }, [state.currentSession?.role]);
+
+  useEffect(() => {
     // Guard explícito de ambiente: subscriptions real-time dependem de WebSocket
     // do browser. Evita side effects de rede em SSR ou em ambientes sem window.
     if (typeof window === "undefined") return;
@@ -751,7 +793,10 @@ export function AppStoreProvider({
 
     const scheduleBlogRefetch = debounce(() => {
       if (!active) return;
-      rhCursosApi.fetchPublicBlogPostsFromSupabase()
+      const fetcher = stateRef.current.currentSession?.role === "admin"
+        ? fetchAdminBlogPosts
+        : rhCursosApi.fetchPublicBlogPostsFromSupabase;
+      fetcher()
         .then((updated) => {
           if (!active || !updated) return;
           setState((current) => ({ ...current, blogPosts: updated }));
@@ -1709,6 +1754,100 @@ export function AppStoreProvider({
     });
   }, []);
 
+  const saveBlogDraft = useCallback<AppStoreValue["saveBlogDraft"]>(async (post, options) => {
+    const snapshot = stateRef.current;
+    const exists = post.id && snapshot.blogPosts.some((item) => item.id === post.id);
+    const nextPost: BlogPost = exists
+      ? ({ ...snapshot.blogPosts.find((item) => item.id === post.id)!, ...post, status: "Rascunho" } as BlogPost)
+      : ({
+          id: `post-${Date.now()}`,
+          title: post.title ?? "Novo post",
+          slug: slugify(post.title ?? "novo-post"),
+          summary: post.summary ?? "",
+          content: post.content ?? "",
+          category: post.category ?? "Tecnologia",
+          tags: post.tags ?? [],
+          author: post.author ?? "Equipe RH Cursos",
+          date: new Date().toISOString(),
+          readingTime: post.readingTime ?? "5 min",
+          image: post.image ?? "",
+          relatedCourseId: post.relatedCourseId ?? "",
+          ...post,
+          status: "Rascunho"
+        } as BlogPost);
+
+    const persisted = await persistAdminMutation(
+      {
+        resource: "blog",
+        action: "save-draft",
+        payload: {
+          id: post.id,
+          title: nextPost.title,
+          summary: nextPost.summary,
+          content: nextPost.content,
+          category: nextPost.category,
+          tags: nextPost.tags,
+          author: nextPost.author,
+          readingTime: nextPost.readingTime,
+          status: "Rascunho",
+          image: nextPost.image,
+          imageAlt: nextPost.imageAlt,
+          contentFormat: nextPost.contentFormat,
+          seoTitle: nextPost.seoTitle,
+          seoDescription: nextPost.seoDescription,
+          canonicalUrl: nextPost.canonicalUrl,
+          ogImageUrl: nextPost.ogImageUrl,
+          relatedCourseId: nextPost.relatedCourseId,
+        }
+      },
+      options?.silent ? undefined : "Rascunho salvo."
+    );
+    const canonicalPost = persisted && typeof persisted.id === "string"
+      ? mapBlogPost(persisted as unknown as BlogPostRow)
+      : nextPost;
+    startTransition(() => {
+      setState((current) => ({ ...current, blogPosts: upsertCollection(current.blogPosts, Boolean(exists), canonicalPost) }));
+    });
+    return canonicalPost.id;
+  }, []);
+
+  const transitionBlogPost = useCallback<AppStoreValue["transitionBlogPost"]>(async (id, action, scheduledAt) => {
+    const persisted = await persistAdminMutation(
+      { resource: "blog", action, id, ...(scheduledAt ? { scheduledAt } : {}) },
+      action === "submit-review" ? "Post enviado para revisão."
+        : action === "schedule" ? "Post agendado."
+          : action === "publish" ? "Post publicado."
+            : action === "archive" ? "Post arquivado."
+              : "Post restaurado como rascunho."
+    );
+    if (!persisted) return;
+    const updated = mapBlogPost(persisted as unknown as BlogPostRow);
+    startTransition(() => {
+      setState((current) => ({ ...current, blogPosts: current.blogPosts.map((post) => post.id === id ? updated : post) }));
+    });
+  }, []);
+
+  const saveBlogContent = useCallback<AppStoreValue["saveBlogContent"]>(async (post, options) => {
+    const persisted = await persistAdminMutation(
+      {
+        resource: "blog",
+        action: "save-content",
+        payload: {
+          ...post,
+          status: post.status,
+          relatedCourseId: post.relatedCourseId,
+        }
+      },
+      options?.silent ? undefined : "Conteúdo salvo."
+    );
+    if (!persisted) return post.id;
+    const updated = mapBlogPost(persisted as unknown as BlogPostRow);
+    startTransition(() => {
+      setState((current) => ({ ...current, blogPosts: current.blogPosts.map((item) => item.id === updated.id ? updated : item) }));
+    });
+    return updated.id;
+  }, []);
+
   const deleteBlogPost = useCallback<AppStoreValue["deleteBlogPost"]>(async (id) => {
     const snapshot = stateRef.current.blogPosts;
     const removedIndex = snapshot.findIndex((item) => item.id === id);
@@ -1824,6 +1963,9 @@ export function AppStoreProvider({
       createEnrollmentAdmin,
       deleteEnrollment,
       upsertBlogPost,
+      saveBlogDraft,
+      saveBlogContent,
+      transitionBlogPost,
       deleteBlogPost,
       resetStore
     }),
@@ -1839,6 +1981,9 @@ export function AppStoreProvider({
       createEnrollmentAdmin,
       deleteEnrollment,
       upsertBlogPost,
+      saveBlogDraft,
+      saveBlogContent,
+      transitionBlogPost,
       deleteBlogPost,
       resetStore
     ]

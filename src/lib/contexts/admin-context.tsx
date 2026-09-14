@@ -4,6 +4,8 @@ import { createContext, useContext } from "react";
 
 import type { BlogPost, Lead } from "@/types";
 
+export type BlogTransitionAction = "submit-review" | "schedule" | "publish" | "archive" | "restore";
+
 import type { LeadPayload, StudentPayload, AdminEnrollmentPayload } from "./store-types";
 
 /**
@@ -23,6 +25,9 @@ export type AdminStoreValue = {
   createEnrollmentAdmin: (payload: AdminEnrollmentPayload) => Promise<void>;
   deleteEnrollment: (id: string) => Promise<void>;
   upsertBlogPost: (post: Partial<BlogPost>) => Promise<void>;
+  saveBlogDraft: (post: Partial<BlogPost>, options?: { silent?: boolean }) => Promise<string | undefined>;
+  saveBlogContent: (post: Partial<BlogPost> & Pick<BlogPost, "id" | "status">, options?: { silent?: boolean }) => Promise<string | undefined>;
+  transitionBlogPost: (id: string, action: BlogTransitionAction, scheduledAt?: string) => Promise<void>;
   deleteBlogPost: (id: string) => Promise<void>;
   resetStore: () => void;
 };

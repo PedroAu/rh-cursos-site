@@ -353,6 +353,12 @@ test("AdminResourcePage configs cover all 7 resource field contracts", () => {
     "summary",
     "content",
     "image",
+    "imageAlt",
+    "contentFormat",
+    "seoTitle",
+    "seoDescription",
+    "canonicalUrl",
+    "ogImageUrl",
     "tags",
     "readingTime",
     "relatedCourseId",
@@ -362,6 +368,12 @@ test("AdminResourcePage configs cover all 7 resource field contracts", () => {
     status: "select",
     summary: "textarea",
     content: "textarea",
+    imageAlt: "text",
+    contentFormat: "select",
+    seoTitle: "text",
+    seoDescription: "textarea",
+    canonicalUrl: "text",
+    ogImageUrl: "text",
     tags: "array",
     relatedCourseId: "select",
   });
@@ -408,6 +420,13 @@ test("blog config preserves editorial CRUD metadata and searches beyond the titl
   ]);
   expect(config.onDelete).toBeTypeOf("function");
   expect(config.columns.find((column) => column.key === "date")?.render(store.blogPosts[0] as never)).toBe("1 de jun. de 2026");
+  expect(config.fields.find((field) => field.key === "category")?.options).toEqual(
+    expect.arrayContaining([
+      { value: "eSocial", label: "eSocial" },
+      { value: "Folha de Pagamento", label: "Folha de Pagamento" },
+      { value: "Departamento Pessoal", label: "Departamento Pessoal" },
+    ])
+  );
 
   const authorSearch = buildResourceConfig(
     "blog",

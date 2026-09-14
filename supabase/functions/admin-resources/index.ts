@@ -35,10 +35,12 @@ import {
   enrollmentStatusSchema,
   instructorSchema,
   leadSchema,
+  blogDraftSchema,
   leadStatusUpdateSchema,
   studentSchema,
 } from "../_shared/admin-validation.ts";
 import { normalizeSearchText, resolveUniqueId } from "../_shared/reference-resolution.ts";
+import { z } from "https://esm.sh/zod@4.4.3";
 
 type ResourceKey =
   | "courses"
@@ -53,6 +55,9 @@ type AdminMutation =
   | { resource: ResourceKey; action: "list" }
   | { resource: ResourceKey; action: "create"; payload: Record<string, unknown> }
   | { resource: ResourceKey; action: "upsert"; payload: Record<string, unknown> }
+  | { resource: "blog"; action: "save-draft"; payload: Record<string, unknown> }
+  | { resource: "blog"; action: "save-content"; payload: Record<string, unknown> }
+  | { resource: "blog"; action: "submit-review" | "schedule" | "publish" | "archive" | "restore"; id: string; scheduledAt?: string }
   | { resource: ResourceKey; action: "delete"; id: string }
   | { resource: ResourceKey; action: "update-status"; id: string; status: string };
 
@@ -178,6 +183,27 @@ function validateMutation(mutation: AdminMutation): string | null {
       return null;
     }
 
+    if (mutation.resource === "blog" && mutation.action === "save-draft") {
+      const parsed = blogDraftSchema.parse(mutation.payload);
+      if (parsed.status !== "Rascunho") return "save-draft só aceita o status Rascunho.";
+      mutation.payload = parsed;
+      return null;
+    }
+
+    if (mutation.resource === "blog" && mutation.action === "save-content") {
+      mutation.payload = blogPostSchema.parse(mutation.payload);
+      return null;
+    }
+
+    if (mutation.resource === "blog" && ["submit-review", "schedule", "publish", "archive", "restore"].includes(mutation.action)) {
+      deleteIdSchema.parse({ id: mutation.id });
+      if (mutation.action === "schedule") {
+        const scheduledAt = z.string().datetime({ offset: true }).parse(mutation.scheduledAt);
+        if (new Date(scheduledAt).getTime() <= Date.now()) return "A data de agendamento deve estar no futuro.";
+      }
+      return null;
+    }
+
     if (mutation.action === "update-status") {
       if (mutation.resource === "leads") leadStatusUpdateSchema.parse({ status: mutation.status });
       if (mutation.resource === "enrollments") enrollmentStatusSchema.parse({ status: mutation.status });
@@ -211,7 +237,7 @@ function validateMutation(mutation: AdminMutation): string | null {
   }
 }
 
-async function applyMutation(mutation: AdminMutation): Promise<{ skipped: boolean; data?: unknown }> {
+async function applyMutation(mutation: AdminMutation, actorId?: string): Promise<{ skipped: boolean; data?: unknown }> {
   const supabase = adminClient();
 
   if (mutation.action === "list") {
@@ -224,7 +250,85 @@ async function applyMutation(mutation: AdminMutation): Promise<{ skipped: boolea
       if (error) throw error;
       return { skipped: false, data };
     }
+    if (mutation.resource === "blog") {
+      const { data, error } = await supabase
+        .from("post_blog")
+        .select("*")
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return { skipped: false, data };
+    }
     return { skipped: true };
+  }
+
+  if (mutation.resource === "blog" && mutation.action === "save-draft") {
+    const p = mutation.payload;
+    const relatedCourseId = p.relatedCourseId
+      ? await resolveCourseId(supabase, String(p.relatedCourseId))
+      : undefined;
+    const { data, error } = await supabase.from("post_blog").upsert(
+      blogPostToUpsert({
+        ...p,
+        status: "Rascunho",
+        summary: String(p.summary ?? "").trim() || "Rascunho em edição",
+        content: String(p.content ?? "").trim() || "Rascunho em edição.",
+        relatedCourseId: relatedCourseId ?? null,
+        atualizadoPor: actorId ?? null,
+        criadoPor: actorId ?? null,
+      })
+    ).select("*").single();
+    if (error) throw error;
+    return { skipped: false, data };
+  }
+
+  if (mutation.resource === "blog" && mutation.action === "save-content") {
+    if (!actorId || typeof mutation.payload.id !== "string") {
+      throw new AdminResourceError("Post e identidade do operador são obrigatórios.", 422);
+    }
+    const p = mutation.payload;
+    const { data: current, error: currentError } = await supabase
+      .from("post_blog")
+      .select("id,status,publicado_em,revisao_atual")
+      .eq("id", p.id)
+      .is("deleted_at", null)
+      .single();
+    if (currentError) throw currentError;
+    if (p.status !== current.status) {
+      throw new AdminResourceError("Altere o status usando uma ação editorial específica.", 422);
+    }
+    const relatedCourseId = p.relatedCourseId
+      ? await resolveCourseId(supabase, String(p.relatedCourseId))
+      : undefined;
+    const update = blogPostToUpsert({
+      ...p,
+      date: current.publicado_em,
+      status: current.status,
+      relatedCourseId: relatedCourseId ?? null,
+      atualizadoPor: actorId,
+    });
+    const { data, error } = await supabase.rpc("admin_save_blog_post_content", {
+      p_post_id: p.id,
+      p_actor_id: actorId,
+      p_payload: update,
+    });
+    if (error) throw error;
+    return { skipped: false, data };
+  }
+
+  if (mutation.resource === "blog" && ["submit-review", "schedule", "publish", "archive", "restore"].includes(mutation.action)) {
+    if (!actorId) throw new AdminResourceError("Identidade do operador ausente.", 401);
+    const { data, error } = await supabase.rpc("admin_transition_blog_post", {
+      p_post_id: mutation.id,
+      p_action: mutation.action,
+      p_actor_id: actorId,
+      p_scheduled_at: "scheduledAt" in mutation && mutation.scheduledAt ? mutation.scheduledAt : null,
+    });
+    if (error) {
+      const status = error.code === "42501" ? 403 : error.code === "P0002" ? 404 : 422;
+      throw new AdminResourceError(error.message, status);
+    }
+    return { skipped: false, data };
   }
 
   if (mutation.action === "create") {
@@ -529,7 +633,7 @@ Deno.serve(async (request) => {
   }
 
   try {
-    const result = await applyMutation(mutation);
+    const result = await applyMutation(mutation, session.userId);
 
     // Audit log assíncrono — não bloqueia a resposta nem falha a requisição
     const resourceId =
@@ -538,7 +642,7 @@ Deno.serve(async (request) => {
         : (mutation.payload as Record<string, unknown>)?.id as string | undefined;
 
     const safePayload =
-      mutation.action === "upsert"
+      mutation.action === "upsert" || mutation.action === "save-draft" || mutation.action === "save-content"
         ? sanitizePayloadForAudit(mutation.payload as Record<string, unknown>)
         : null;
 

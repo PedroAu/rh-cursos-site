@@ -20,7 +20,16 @@ import { Link, useSearchParams } from "@/lib/router-compat";
 import type { BlogPost } from "@/types";
 import { cn, formatDate } from "@/lib/utils";
 
-const canvasCategories = ["Todos", "Licitações", "LGPD", "Compliance", "Gestão Pública"] as const;
+const canvasCategories = [
+  "Todos",
+  "eSocial",
+  "Folha de Pagamento",
+  "Departamento Pessoal",
+  "Gestão Pública",
+  "Licitações",
+  "LGPD",
+  "Compliance"
+] as const;
 
 const categoryPresentation: Record<string, { glyph: string; tint: string }> = {
   Compliance: {
@@ -34,6 +43,10 @@ const categoryPresentation: Record<string, { glyph: string; tint: string }> = {
   eSocial: {
     glyph: "•",
     tint: "linear-gradient(135deg,color-mix(in_srgb,var(--rh-gray) 88%,var(--tk-brand)),color-mix(in_srgb,var(--rh-gray) 62%,white))"
+  },
+  "Folha de Pagamento": {
+    glyph: "≡",
+    tint: "linear-gradient(135deg,color-mix(in_srgb,var(--tk-accent) 66%,var(--tk-brand)),color-mix(in_srgb,var(--tk-focus) 60%,white))"
   },
   "Gestão Pública": {
     glyph: "◇",
@@ -59,8 +72,9 @@ const categoryPresentation: Record<string, { glyph: string; tint: string }> = {
 
 function normalizeBlogCategory(category: BlogPost["category"]) {
   const aliases: Partial<Record<BlogPost["category"], (typeof canvasCategories)[number]>> = {
-    "Departamento Pessoal": "Todos",
-    eSocial: "Todos",
+    "Departamento Pessoal": "Departamento Pessoal",
+    eSocial: "eSocial",
+    "Folha de Pagamento": "Folha de Pagamento",
     Liderança: "Todos",
     Tecnologia: "Todos",
     "Assédio e Compliance": "Compliance",
@@ -236,8 +250,8 @@ export function BlogPage() {
             Blog: a norma explicada de um jeito que você <em className="italic">usa</em>
           </h1>
           <p className="mt-4 max-w-[60ch] font-tk-serif text-[1.16rem] font-normal leading-[1.45] text-tk-ink-muted">
-            Análises práticas de licitações, LGPD, compliance e gestão pública: escritas por quem aplica essas normas
-            no dia a dia de organizações públicas e privadas.
+            Análises práticas de eSocial, folha de pagamento e Departamento Pessoal para organizações públicas,
+            escritas para apoiar decisões que acontecem na rotina.
           </p>
         </div>
       </section>

@@ -290,6 +290,7 @@ function fromDbBlogCategory(value: string): BlogPost["category"] {
     "Compliance",
     "Departamento Pessoal",
     "eSocial",
+    "Folha de Pagamento",
     "Gestão Pública",
     "Liderança",
     "Tecnologia",
@@ -423,7 +424,7 @@ export function mapLead(row: LeadRow): Lead {
 }
 
 export function mapBlogPost(row: BlogPostRow): BlogPost {
-  return {
+  const mapped: BlogPost = {
     id: row.id,
     title: row.titulo,
     slug: row.slug,
@@ -436,8 +437,22 @@ export function mapBlogPost(row: BlogPostRow): BlogPost {
     readingTime: row.tempo_leitura ?? "5 min",
     status: row.status,
     image: row.imagem_url ?? "",
-    relatedCourseId: row.curso_id ?? ""
+    relatedCourseId: row.curso_id ?? "",
   };
+
+  // Mantém compatibilidade com fixtures/integrações legadas que ainda não
+  // projetam as colunas editoriais. Quando a coluna existe no read model, ela
+  // é exposta normalmente para o editor e para a página pública.
+  if (row.imagem_alt != null) mapped.imageAlt = row.imagem_alt;
+  if (row.conteudo_formato != null) mapped.contentFormat = row.conteudo_formato === "markdown" ? "markdown" : "plain";
+  if (row.agendado_em !== undefined) mapped.scheduledAt = row.agendado_em;
+  if (row.seo_titulo !== undefined) mapped.seoTitle = row.seo_titulo ?? null;
+  if (row.seo_descricao !== undefined) mapped.seoDescription = row.seo_descricao ?? null;
+  if (row.canonical_url !== undefined) mapped.canonicalUrl = row.canonical_url ?? null;
+  if (row.og_image_url !== undefined) mapped.ogImageUrl = row.og_image_url ?? null;
+  if (row.revisao_atual !== undefined) mapped.revision = row.revisao_atual ?? 1;
+
+  return mapped;
 }
 
 export function mapAssessmentToTestimonial(row: AssessmentWithCourseRow): Testimonial {

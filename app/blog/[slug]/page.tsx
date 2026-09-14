@@ -37,14 +37,17 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   return {
-    title: `${post.title} | RH Cursos`,
-    description: post.summary,
-    alternates: { canonical: `/blog/${post.slug}` },
+    title: `${post.seoTitle ?? post.title} | RH Cursos`,
+    description: post.seoDescription ?? post.summary,
+    alternates: { canonical: post.canonicalUrl ?? `/blog/${post.slug}` },
     openGraph: {
-      title: `${post.title} | RH Cursos`,
-      description: post.summary,
-      url: `${SITE_URL}/blog/${post.slug}/`,
-      type: "article"
+      title: `${post.seoTitle ?? post.title} | RH Cursos`,
+      description: post.seoDescription ?? post.summary,
+      url: post.canonicalUrl ?? `${SITE_URL}/blog/${post.slug}/`,
+      type: "article",
+      publishedTime: post.date,
+      authors: [post.author],
+      ...(post.ogImageUrl || post.image ? { images: [post.ogImageUrl ?? post.image] } : {})
     }
   };
 }
@@ -64,12 +67,35 @@ export default async function Page({ params }: PageProps) {
     notFound();
   }
 
+  const post = (blogPosts ?? []).find((item) => item.slug === slug);
+  const jsonLd = post
+    ? {
+        "@context": "https://schema.org",
+        "@type": "BlogPosting",
+        headline: post.title,
+        description: post.summary,
+        datePublished: post.date,
+        dateModified: post.date,
+        author: { "@type": "Person", name: post.author },
+        ...(post.image || post.ogImageUrl ? { image: [post.ogImageUrl ?? post.image] } : {}),
+        mainEntityOfPage: `${SITE_URL}/blog/${post.slug}/`
+      }
+    : null;
+
   return (
-    <BlogPostClient
-      initialData={{
-        blogPosts: blogPosts ?? [],
-        courses: catalog?.courses ?? []
-      }}
-    />
+    <>
+      {jsonLd ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
+        />
+      ) : null}
+      <BlogPostClient
+        initialData={{
+          blogPosts: blogPosts ?? [],
+          courses: catalog?.courses ?? []
+        }}
+      />
+    </>
   );
 }

@@ -17,7 +17,7 @@ export type EnrollmentStatus =
   | "Cancelada"
   | "Concluída";
 export type LeadStatus = "Novo" | "Em atendimento" | "Proposta enviada" | "Convertido" | "Perdido";
-export type BlogStatus = "Rascunho" | "Publicado" | "Arquivado";
+export type BlogStatus = "Rascunho" | "Em revisão" | "Agendado" | "Publicado" | "Arquivado";
 export type LeadType = "Curso" | "InCompany" | "Consultoria" | "Newsletter" | "Orçamento" | "Contato";
 export type LeadOrigin =
   | "Site"
@@ -224,6 +224,7 @@ export type BlogPost = {
     | "Compliance"
     | "Departamento Pessoal"
     | "eSocial"
+    | "Folha de Pagamento"
     | "Gestão Pública"
     | "Liderança"
     | "Tecnologia"
@@ -234,7 +235,15 @@ export type BlogPost = {
   readingTime: string;
   status: BlogStatus;
   image: string;
+  imageAlt?: string;
   relatedCourseId: string;
+  contentFormat?: "plain" | "markdown";
+  scheduledAt?: string | null;
+  seoTitle?: string | null;
+  seoDescription?: string | null;
+  canonicalUrl?: string | null;
+  ogImageUrl?: string | null;
+  revision?: number;
 };
 
 export type Enrollment = {

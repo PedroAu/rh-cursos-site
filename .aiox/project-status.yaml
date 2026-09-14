@@ -1,14 +1,23 @@
 status:
-  branch: codex/hotfixes-no-payments
-  modifiedFiles: []
-  modifiedFilesTotalCount: 0
+  branch: main
+  modifiedFiles:
+    - .aiox/project-status.yaml
+    - app/admin/blog/page.tsx
+    - app/blog/[slug]/page.tsx
+    - src/__tests__/lib/admin-resource-configs.test.ts
+    - src/__tests__/views/public/blog.test.tsx
+  modifiedFilesTotalCount: 32
   recentCommits:
-    - 'fix: resolve pre-push fidelity findings'
-    - 'fix(seo): address CodeRabbit review on agenda/course-SEO PR'
+    - >-
+      Merge pull request #15 from
+      PedroAu/codex/fix-production-smoke-course-discovery
+    - >-
+      Merge remote-tracking branch 'origin/main' into
+      codex/fix-production-smoke-course-discovery
   currentEpic: null
   currentStory: null
-  lastUpdate: '2026-08-14T11:35:12.125Z'
+  lastUpdate: '2026-09-14T14:49:17.739Z'
   isGitRepo: true
-timestamp: 1786707312126
+timestamp: 1789397357740
 ttl: 60
-gitFingerprint: 1786476813196.8728:1786634593588.2412
+gitFingerprint: 1788289633951.0962:1789397010304.88

@@ -422,9 +422,10 @@ async function fetchPublicBlogPosts(client: RhCursosClient | null, forcePublicTe
     () =>
       client
         .from("post_blog")
-        .select("id,titulo,slug,resumo,conteudo,categoria,tags,autor,publicado_em,tempo_leitura,status,imagem_url,curso_id,created_at")
+        .select("id,titulo,slug,resumo,conteudo,categoria,tags,autor,publicado_em,tempo_leitura,status,imagem_url,imagem_alt,curso_id,created_at,agendado_em,conteudo_formato,seo_titulo,seo_descricao,canonical_url,og_image_url,revisao_atual")
         .is("deleted_at", null)
         .eq("status", "Publicado")
+        .lte("publicado_em", new Date().toISOString())
         .order("publicado_em", { ascending: false }),
     { label: "fetchPublicBlogPosts:post_blog" }
   );
@@ -510,7 +511,7 @@ export async function fetchAdminBlogPostsFromSupabaseServer() {
     () =>
       client
         .from("post_blog")
-        .select("id,titulo,slug,resumo,conteudo,categoria,tags,autor,publicado_em,tempo_leitura,status,imagem_url,curso_id,created_at")
+        .select("id,titulo,slug,resumo,conteudo,categoria,tags,autor,publicado_em,tempo_leitura,status,imagem_url,imagem_alt,curso_id,created_at,agendado_em,conteudo_formato,seo_titulo,seo_descricao,canonical_url,og_image_url,revisao_atual")
         .is("deleted_at", null)
         .order("created_at", { ascending: false }),
     { label: "fetchAdminBlogPosts:post_blog" }
