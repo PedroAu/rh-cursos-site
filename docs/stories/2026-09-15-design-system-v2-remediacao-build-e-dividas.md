@@ -2,7 +2,7 @@
 
 ## Status
 
-In Progress — remediação técnica e QA estático aprovados; revisão visual desktop/mobile das seis views autorizadas permanece pendente.
+Ready for Review — remediação técnica, QA estático e deploy aprovados; revisão visual desktop/mobile formal das seis views autorizadas permanece pendente.
 
 ## Tipo e prioridade
 
@@ -144,14 +144,17 @@ O contrato v2 define `src/design-tokens/tokens.css` como fonte runtime canônica
 
 ## Definition of Done
 
-- [ ] AC1–AC6 demonstrados com os comandos e evidências acima.
-- [ ] `build:verify` aprovado e `npm run build`/runtime comprovadamente não alterados.
-- [ ] JSON/DTCG em paridade com `--tk-success` e `--tk-error`; gate falha em divergência.
+- [x] AC1–AC6 demonstrados com os comandos e evidências acima.
+- [x] `build:verify` aprovado; `npm run build`/runtime comprovadamente não alterados no escopo local e o build de produção aprovado no pipeline.
+- [x] JSON/DTCG em paridade com `--tk-success` e `--tk-error`; gate falha em divergência.
 - [x] As 54 ocorrências reportáveis foram removidas e o gate não retorna sucesso com achados.
 - [ ] Revisão visual autorizada e veredito @qa registrado.
-- [ ] File List e Change Log atualizados; nenhum prefixo proibido aparece no diff.
+- [x] File List e Change Log atualizados; nenhum prefixo proibido aparece no diff.
 
 ## Change Log
+
+- **0.5 — encerramento operacional (2026-09-15):** preflight inicial bloqueou o worktree principal por alterações paralelas; o deploy foi retomado com worktree isolado, preservando essas alterações fora do commit.
+- **0.6 — deploy (2026-09-15):** commit `de45d0f` publicado em `origin/main`; pipeline [35035133356](https://github.com/PedroAu/rh-cursos-site/actions/runs/35035133356) concluiu com sucesso, incluindo deploy e verificação das rotas do Cloudflare Worker. Alterações paralelas permaneceram fora do commit.
 
 | Data | Versão | Descrição | Autor |
 |---|---:|---|---|
@@ -176,7 +179,7 @@ GPT-5
 - `check-production-env.mjs` agora falha fechado para ausência, vazio, placeholder, URL inválida, HTTP fora de localhost/127.0.0.1 e URL com path/query/fragment/credenciais.
 - `tokens.json` e `tokens.dtcg.json` refletem `#068466` e `#ea384c`; o gate compara todos os papéis serializados correspondentes de sucesso/erro/perigo contra o CSS runtime.
 - Os aliases de forma e profundidade adicionados são novos nomes e não substituem nem redefinem variáveis existentes; os seis consumidores preservam exatamente seus valores anteriores sem criar CSS de página ou alterar as árvores protegidas.
-- Pendente somente revisão visual humana das seis rotas autorizadas e veredito independente de @qa.
+- Pendente somente revisão visual humana formal das seis rotas autorizadas; o veredito técnico independente de @qa e o pipeline remoto já estão aprovados.
 
 ## QA Review
 
@@ -189,6 +192,7 @@ GPT-5
 - A paridade de `success`/`error`/`danger` e o gate bloqueante para estilos arbitrários foram confirmados.
 - Os aliases aditivos preservam literalmente os raios e sombras anteriores; nenhum valor existente foi redefinido.
 - Nenhum arquivo rastreado ou não rastreado surgiu nas árvores protegidas da LP Departamento Pessoal do Zero; o auditor também não as percorre.
+- O pipeline remoto `35035133356` aprovou os gates e concluiu o deploy/verify do Cloudflare Worker.
 
 **Pendência:** registrar revisão visual desktop/mobile das seis views autorizadas. Nenhuma rota, snapshot ou teste visual da LP Departamento Pessoal do Zero será incluído.
 
