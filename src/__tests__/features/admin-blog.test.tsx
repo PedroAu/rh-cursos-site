@@ -14,6 +14,11 @@ vi.mock("next/link", () => ({
   default: ({ href, children, ...props }: React.ComponentProps<"a">) => <a href={href} {...props}>{children}</a>
 }));
 vi.mock("@/lib/contexts/admin-context", () => ({ useAdminStore: () => mocks }));
+vi.mock("@/components/blog/blog-rich-text-editor", () => ({
+  BlogRichTextEditor: ({ value, onChange, disabled }: { value: string; onChange: (value: string) => void; disabled?: boolean }) => (
+    <textarea aria-label="Conteúdo" value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)} />
+  )
+}));
 
 const post: BlogPost = {
   id: "post-1", title: "Rotinas de departamento pessoal", slug: "rotinas-dp",
@@ -86,15 +91,10 @@ describe("Gestão do blog em páginas separadas", () => {
     expect(screen.queryByLabelText("Título")).not.toBeInTheDocument();
   });
 
-  it("oferece formatação segura e usa a mesma marcação na prévia", () => {
+  it("usa o conteúdo visual salvo na mesma prévia da publicação", () => {
     render(<AdminBlogEditor initialPost={post} />);
     const content = screen.getByLabelText("Conteúdo") as HTMLTextAreaElement;
-    fireEvent.change(content, { target: { value: "Trecho importante" } });
-    content.setSelectionRange(0, content.value.length);
-    fireEvent.click(screen.getByRole("button", { name: "Negrito" }));
-
-    expect(content).toHaveValue("**Trecho importante**");
-    expect(screen.getByRole("combobox", { name: "Formato" })).toHaveValue("markdown");
+    fireEvent.change(content, { target: { value: "**Trecho importante**" } });
 
     fireEvent.click(screen.getByRole("button", { name: "Pré-visualizar" }));
     expect(screen.getByText("Trecho importante").tagName).toBe("STRONG");
