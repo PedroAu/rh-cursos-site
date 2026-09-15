@@ -104,6 +104,11 @@ export const tokens = {
     glass: "var(--tk-radius-glass)",
     card: "var(--tk-radius-card)",
     pill: "var(--tk-radius-pill)",
+    "tk-segment": "var(--tk-radius-segment)",
+    "tk-icon": "var(--tk-radius-icon)",
+    "tk-field-lg": "var(--tk-radius-field-lg)",
+    "tk-card-compact": "var(--tk-radius-card-compact)",
+    "tk-panel": "var(--tk-radius-panel)",
     "tk-input": "var(--tk-radius-input)",
     "tk-button": "var(--tk-radius-button)",
     "tk-md": "var(--tk-radius-md)",
@@ -121,6 +126,11 @@ export const tokens = {
     "tk-glass": "var(--tk-shadow-glass)",
     "tk-card": "var(--tk-shadow-card)",
     "tk-pop": "var(--tk-shadow-pop)",
+    "tk-panel": "var(--tk-shadow-panel)",
+    "tk-lifted": "var(--tk-shadow-lifted)",
+    "tk-avatar": "var(--tk-shadow-avatar)",
+    "tk-media-control": "var(--tk-shadow-media-control)",
+    "tk-radio-indicator": "var(--tk-shadow-radio-indicator)",
   },
 
   lineHeight: {

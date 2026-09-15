@@ -325,7 +325,7 @@ export function InCompanyPage() {
                     return (
                       <div key={item.title} className={cn(index < heroPoints.length - 1 && "border-b border-tk-line pb-5")}>
                         <div className="flex items-start gap-4">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-tk-accent-soft text-tk-brand">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-tk-icon bg-tk-accent-soft text-tk-brand">
                             <Icon className="h-5 w-5" />
                           </div>
                           <div>
@@ -380,7 +380,7 @@ export function InCompanyPage() {
                   className="border-outline-variant bg-tk-surface"
                 >
                   <CardContent className="space-y-4 p-8">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-[12px] bg-tk-accent-soft text-tk-brand">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-tk-field-lg bg-tk-accent-soft text-tk-brand">
                       <Icon className="h-5 w-5" />
                     </div>
                     <h3 className="font-tk-display text-[1.55rem] font-bold leading-[1.18] tracking-[var(--tk-tracking-display)] text-tk-ink">
@@ -425,7 +425,7 @@ export function InCompanyPage() {
               {themes.map((theme) => (
                 <div
                   key={theme}
-                  className="flex items-center gap-3 rounded-[16px] border border-outline-variant bg-white px-4 py-3 text-[15px] text-tk-ink"
+                  className="flex items-center gap-3 rounded-tk-glass border border-outline-variant bg-white px-4 py-3 text-[15px] text-tk-ink"
                 >
                   <span className="h-2 w-2 rounded-full bg-tk-brand" aria-hidden />
                   <span>{theme}</span>

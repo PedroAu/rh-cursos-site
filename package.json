@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:verify": "sh -c 'set -a; . ./.env.example; set +a; NODE_ENV=production next build --experimental-build-mode=compile'",
     "docs:api:lint": "node scripts/lint-openapi.mjs",
     "docs:api:build": "node scripts/build-api-docs.mjs",
     "docs:api:check-drift": "node scripts/check-openapi-drift.mjs",

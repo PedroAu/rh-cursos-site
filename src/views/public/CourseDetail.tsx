@@ -384,7 +384,7 @@ export function CourseDetailPage() {
   return (
     <>
       <div className="bg-[var(--tk-surface-2)] py-6 sm:py-8">
-        <div className="mx-auto max-w-[1180px] overflow-hidden rounded-[20px] border border-[var(--tk-border)] bg-[var(--tk-surface)] shadow-[0_30px_80px_-30px_rgba(0,0,0,0.25)]">
+        <div className="mx-auto max-w-[1180px] overflow-hidden rounded-tk-panel border border-[var(--tk-border)] bg-[var(--tk-surface)] shadow-tk-panel">
           <div className="grid min-w-0 xl:grid-cols-[minmax(0,1fr)_372px]">
             <div className="min-w-0">
               <header className="border-b border-[var(--tk-border)] bg-[var(--tk-gradient-soft)] px-4 py-10 sm:px-8 sm:py-11 lg:px-10 lg:py-14">
@@ -459,7 +459,7 @@ export function CourseDetailPage() {
 
                   <div className="grid gap-3 sm:grid-cols-2">
                     {highlightCards.map((item) => (
-                      <div key={item.title} className="flex gap-3 rounded-[14px] border border-[var(--tk-border)] bg-tk-surface p-4">
+                      <div key={item.title} className="flex gap-3 rounded-tk-card-compact border border-[var(--tk-border)] bg-tk-surface p-4">
                         <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--tk-accent-soft)] text-tk-brand">
                           <CheckCircle2 aria-hidden="true" className="h-4 w-4" />
                         </span>
@@ -474,7 +474,7 @@ export function CourseDetailPage() {
 
                 <section
                   aria-labelledby="publico"
-                  className="rounded-[16px] border border-[var(--tk-cream-dark)] bg-[var(--tk-cream)] p-8"
+                  className="rounded-tk-glass border border-[var(--tk-cream-dark)] bg-[var(--tk-cream)] p-8"
                 >
                   <h2 id="publico" className="font-tk-display text-[1.7rem] font-bold tracking-[-0.01em] text-tk-ink">
                     Para quem é este curso
@@ -516,11 +516,11 @@ export function CourseDetailPage() {
                       <AccordionItem
                         key={module.title}
                         value={`module-${index}`}
-                        className="overflow-hidden rounded-[14px] border border-[var(--tk-border)] bg-tk-surface shadow-tk-card"
+                        className="overflow-hidden rounded-tk-card-compact border border-[var(--tk-border)] bg-tk-surface shadow-tk-card"
                       >
                         <AccordionTrigger className="px-5 py-4 text-left font-tk-display text-base font-bold tracking-[-0.01em] text-tk-ink hover:no-underline">
                           <span className="flex items-center gap-4">
-                            <span className="inline-flex h-9 w-9 items-center justify-center rounded-[10px] bg-[var(--tk-accent-soft)] font-tk-display text-sm font-bold text-tk-brand">
+                            <span className="inline-flex h-9 w-9 items-center justify-center rounded-tk-icon bg-[var(--tk-accent-soft)] font-tk-display text-sm font-bold text-tk-brand">
                               {String(index + 1).padStart(2, "0")}
                             </span>
                             <span>
@@ -549,7 +549,7 @@ export function CourseDetailPage() {
 
                 <section
                   aria-labelledby="instrutor"
-                  className="rounded-[16px] border border-[var(--tk-border)] bg-tk-surface p-8 shadow-[0_8px_30px_-20px_rgba(0,0,0,0.3)]"
+                  className="rounded-tk-glass border border-[var(--tk-border)] bg-tk-surface p-8 shadow-tk-lifted"
                 >
                   <div className="mb-5 text-xs font-semibold uppercase tracking-[0.06em] text-tk-ink-muted">Seu instrutor</div>
                   <div className="flex flex-col gap-6 md:flex-row md:items-start">
@@ -607,12 +607,12 @@ export function CourseDetailPage() {
                 {testimonial ? (
                   <section
                     aria-labelledby="depoimento"
-                    className="relative overflow-hidden rounded-[16px] border border-[var(--tk-cream-dark)] bg-[var(--tk-cream)] p-8"
+                    className="relative overflow-hidden rounded-tk-glass border border-[var(--tk-cream-dark)] bg-[var(--tk-cream)] p-8"
                   >
                     <div className="absolute -right-2 -top-3 text-[5rem] font-tk-display font-bold text-tk-brand/10">“</div>
                     <div className="relative flex flex-col gap-5 md:flex-row md:items-center">
                       <div className="flex-none">
-                        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white shadow-[0_8px_20px_-10px_rgba(0,0,0,0.25)]">
+                        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white shadow-tk-avatar">
                           <div className="h-20 w-20 overflow-hidden rounded-full">
                             <Image
                               src={course.image}
@@ -655,7 +655,7 @@ export function CourseDetailPage() {
                         <AccordionItem
                           key={item.question}
                           value={`faq-${index}`}
-                          className="overflow-hidden rounded-[12px] border border-[var(--tk-border)] bg-tk-surface shadow-tk-card"
+                          className="overflow-hidden rounded-tk-field-lg border border-[var(--tk-border)] bg-tk-surface shadow-tk-card"
                         >
                           <AccordionTrigger className="px-5 py-4 text-left font-medium text-tk-ink hover:no-underline">
                             {item.question}
@@ -673,7 +673,7 @@ export function CourseDetailPage() {
 
             <aside className="border-t border-[var(--tk-border)] bg-[var(--tk-surface)] xl:sticky xl:top-6 xl:border-l xl:border-t-0 xl:self-start">
               <div className="grid gap-4 p-4 sm:p-6">
-                <div className="overflow-hidden rounded-[16px] border border-[var(--tk-border)] bg-tk-surface shadow-tk-card">
+                <div className="overflow-hidden rounded-tk-glass border border-[var(--tk-border)] bg-tk-surface shadow-tk-card">
                   <div className="relative h-[180px] w-full">
                     <Image
                       src={course.image || "/images/hero-rh-cursos.jpg"}
@@ -684,7 +684,7 @@ export function CourseDetailPage() {
                     />
                     <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(12,106,131,0.12),rgba(12,106,131,0.4))]" />
                     <div className="absolute inset-0 flex items-center justify-center" aria-hidden="true">
-                      <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white text-tk-brand shadow-[0_12px_30px_-12px_rgba(0,0,0,0.4)]">
+                      <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white text-tk-brand shadow-tk-media-control">
                         <Play className="h-9 w-9 fill-current" />
                       </div>
                     </div>
@@ -723,9 +723,9 @@ export function CourseDetailPage() {
                                 if (selectable) setSelectedClassId(trainingClass.id);
                               }}
                               className={cn(
-                                "flex w-full items-center gap-3 rounded-[12px] border p-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                                "flex w-full items-center gap-3 rounded-tk-field-lg border p-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                                 selected
-                                  ? "border-tk-brand bg-[var(--tk-accent-soft)] shadow-[inset_0_0_0_1px_var(--tk-brand)]"
+                                  ? "border-tk-brand bg-[var(--tk-accent-soft)] ring-1 ring-inset ring-tk-brand"
                                   : "border-[var(--tk-border)] bg-tk-surface hover:border-tk-accent"
                               )}
                             >
@@ -749,7 +749,7 @@ export function CourseDetailPage() {
                           );
                         })
                       ) : (
-                        <div className="rounded-[12px] border border-[var(--tk-border)] bg-tk-surface px-4 py-4 text-sm text-tk-ink-muted">
+                        <div className="rounded-tk-field-lg border border-[var(--tk-border)] bg-tk-surface px-4 py-4 text-sm text-tk-ink-muted">
                           {sidebarCopy.nextClassesEmptyLabel}
                         </div>
                       )}
@@ -762,7 +762,7 @@ export function CourseDetailPage() {
                     ) : null}
 
                     {selectedClass ? (
-                      <div className="mt-4 rounded-[12px] border border-[var(--tk-border)] bg-[var(--tk-surface-2)] px-4 py-3 text-sm text-tk-ink-muted">
+                      <div className="mt-4 rounded-tk-field-lg border border-[var(--tk-border)] bg-[var(--tk-surface-2)] px-4 py-3 text-sm text-tk-ink-muted">
                         <strong className="block text-tk-ink">{sidebarCopy.preEnrollmentLabel}</strong>
                         {formatDateRange(selectedClass)} · {formatModalityLabel(selectedClass.modality, selectedClass.location)}
                       </div>
@@ -820,7 +820,7 @@ export function CourseDetailPage() {
                   </div>
                 </div>
 
-                <div className="rounded-[16px] border border-[var(--tk-border)] bg-tk-surface p-5">
+                <div className="rounded-tk-glass border border-[var(--tk-border)] bg-tk-surface p-5">
                   <div className="flex items-start gap-3">
                     <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--tk-accent-soft)] text-tk-brand">
                       <TriangleAlert aria-hidden="true" className="h-4 w-4" />
@@ -831,7 +831,7 @@ export function CourseDetailPage() {
                   </div>
                 </div>
 
-                <div className="rounded-[16px] border border-[var(--tk-border)] bg-[var(--tk-accent-soft)] p-5">
+                <div className="rounded-tk-glass border border-[var(--tk-border)] bg-[var(--tk-accent-soft)] p-5">
                   <div className="text-sm font-semibold text-tk-ink">{sidebarCopy.supportTitle}</div>
                   <div className="mt-1 text-sm leading-6 text-tk-ink-muted">{sidebarCopy.supportText}</div>
                   <Button asChild variant="outline" className="mt-4 w-full border-[var(--tk-border)] bg-white text-tk-ink">
