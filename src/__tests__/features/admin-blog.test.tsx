@@ -85,4 +85,18 @@ describe("Gestão do blog em páginas separadas", () => {
     expect(screen.getByRole("link", { name: "Voltar ao acervo" })).toHaveAttribute("href", "/admin/blog");
     expect(screen.queryByLabelText("Título")).not.toBeInTheDocument();
   });
+
+  it("oferece formatação segura e usa a mesma marcação na prévia", () => {
+    render(<AdminBlogEditor initialPost={post} />);
+    const content = screen.getByLabelText("Conteúdo") as HTMLTextAreaElement;
+    fireEvent.change(content, { target: { value: "Trecho importante" } });
+    content.setSelectionRange(0, content.value.length);
+    fireEvent.click(screen.getByRole("button", { name: "Negrito" }));
+
+    expect(content).toHaveValue("**Trecho importante**");
+    expect(screen.getByRole("combobox", { name: "Formato" })).toHaveValue("markdown");
+
+    fireEvent.click(screen.getByRole("button", { name: "Pré-visualizar" }));
+    expect(screen.getByText("Trecho importante").tagName).toBe("STRONG");
+  });
 });

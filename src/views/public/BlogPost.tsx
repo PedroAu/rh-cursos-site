@@ -5,12 +5,12 @@ import { Link, useParams } from "@/lib/router-compat";
 import { usePathname } from "next/navigation";
 
 import { BlogCard } from "@/components/blog/blog-card";
+import { BlogContent, blogContentToText } from "@/components/blog/blog-content";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/common/empty-state";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAppStore } from "@/lib/app-store";
-import { sanitizeText } from "@/lib/security/sanitize";
 import { formatDate } from "@/lib/utils";
 import { publicTestBaselineBlogPosts } from "@/lib/public-test-baseline";
 
@@ -26,7 +26,7 @@ export function BlogPostPage() {
     publicTestBaselineBlogPosts.find((item) =>
       item.slug === slug || runtimePathname.includes(item.slug)
     );
-  const safeContent = sanitizeText(post?.content ?? "");
+  const safeContent = blogContentToText(post?.content ?? "", post?.contentFormat ?? "plain");
   const relatedPosts = blogPosts.filter((item) => item.slug !== slug && item.category === post?.category).slice(0, 3);
   const relatedCourse = courses.find((course) => course.id === post?.relatedCourseId);
   const leadParagraphs = safeContent.split("\n\n").slice(0, 3);
@@ -68,11 +68,7 @@ export function BlogPostPage() {
             </div>
             <Card className="border-tk-line bg-tk-surface">
               <CardContent className="space-y-5 p-7 md:p-10">
-                {safeContent.split("\n\n").map((paragraph) => (
-                  <p key={paragraph} className="mx-auto max-w-3xl text-base leading-8 text-tk-ink-muted">
-                    {paragraph}
-                  </p>
-                ))}
+                <BlogContent content={post.content} format={post.contentFormat ?? "plain"} className="mx-auto max-w-3xl text-base leading-8 text-tk-ink-muted" />
               </CardContent>
             </Card>
           </article>
