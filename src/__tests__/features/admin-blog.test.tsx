@@ -108,5 +108,10 @@ describe("Gestão do blog em páginas separadas", () => {
     if (!content) return;
     expect(content).toHaveValue("**texto literal**\n# título literal");
     expect(screen.queryByRole("button", { name: "Negrito" })).not.toBeInTheDocument();
+
+    window.confirm = vi.fn().mockReturnValue(true);
+    fireEvent.click(screen.getByRole("button", { name: "Converter para editor visual" }));
+    expect(screen.queryByDisplayValue("**texto literal**\n# título literal")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Conteúdo")).toHaveValue("\\*\\*texto literal\\*\\*\n\\# título literal");
   });
 });

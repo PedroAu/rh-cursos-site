@@ -117,6 +117,16 @@ function formatSavedAt(value: Date | null) {
   return value ? `Salvo às ${value.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}` : "Ainda não salvo";
 }
 
+function escapePlainTextForMarkdown(value: string) {
+  return value
+    .split("\n")
+    .map((line) => line
+      .replace(/([\\`*_{}[\]()+#.!|>])/g, "\\$1")
+      .replace(/^(-|\+)\s/, "\\$1 ")
+      .replace(/^(\d+)\.\s/, "$1\\. "))
+    .join("\n");
+}
+
 export function AdminBlogEditor({ initialPost }: { initialPost?: BlogPost }) {
   const router = useRouter();
   const { saveBlogDraft, saveBlogContent, transitionBlogPost, deleteBlogPost } = useAdminStore();
@@ -315,13 +325,29 @@ export function AdminBlogEditor({ initialPost }: { initialPost?: BlogPost }) {
                 <div className="md:col-span-2">
                   <p className="mb-2 text-sm font-medium text-tk-ink">Conteúdo</p>
                   {form.contentFormat === "plain" ? (
-                    <Textarea
-                      label="Conteúdo em texto simples"
-                      value={form.content}
-                      onChange={(event) => updateField("content", event.target.value)}
-                      hint="Este artigo legado permanece em texto simples. Converta-o explicitamente para Markdown antes de usar a formatação visual."
-                      className="min-h-[360px]"
-                    />
+                    <div className="space-y-3">
+                      <Textarea
+                        label="Conteúdo em texto simples"
+                        value={form.content}
+                        onChange={(event) => updateField("content", event.target.value)}
+                        hint="Este artigo legado permanece em texto simples até você confirmar a conversão para Markdown."
+                        className="min-h-[360px]"
+                      />
+                      <div className="flex justify-end">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            if (!window.confirm("Converter este conteúdo para o editor visual? O texto será preservado literalmente e passará a ser salvo como Markdown.")) return;
+                            updateField("content", escapePlainTextForMarkdown(formRef.current.content));
+                            updateField("contentFormat", "markdown");
+                          }}
+                        >
+                          Converter para editor visual
+                        </Button>
+                      </div>
+                    </div>
                   ) : (
                     <BlogRichTextEditor value={form.content} onChange={updateFormattedContent} disabled={isSaving} />
                   )}
