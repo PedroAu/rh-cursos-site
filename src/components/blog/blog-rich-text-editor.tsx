@@ -45,12 +45,12 @@ const linkUrlSchema = z.string()
   .max(2048, "A URL deve ter no máximo 2048 caracteres.")
   .refine((value) => value.startsWith("/") || URL.canParse(value), "Informe uma URL válida.");
 
-function ToolbarButton({ label, active = false, disabled = false, onClick, children }: ToolbarButtonProps) {
+function ToolbarButton({ label, active, disabled = false, onClick, children }: ToolbarButtonProps) {
   return (
     <button
       type="button"
       aria-label={label}
-      aria-pressed={active}
+      aria-pressed={active === undefined ? undefined : active}
       title={label}
       disabled={disabled}
       onMouseDown={(event) => event.preventDefault()}
@@ -74,6 +74,7 @@ export function BlogRichTextEditor({ value, onChange, disabled = false }: RichTe
 
   const editor = useEditor({
     immediatelyRender: false,
+    shouldRerenderOnTransaction: true,
     extensions: [
       StarterKit.configure({
         // H1-H4 are retained when editing legacy posts. The toolbar intentionally
