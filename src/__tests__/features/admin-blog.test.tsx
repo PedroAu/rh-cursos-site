@@ -23,7 +23,7 @@ vi.mock("@/components/blog/blog-rich-text-editor", () => ({
 const post: BlogPost = {
   id: "post-1", title: "Rotinas de departamento pessoal", slug: "rotinas-dp",
   summary: "Resumo completo para um artigo de departamento pessoal.", content: "Conteúdo do artigo. ".repeat(12),
-  category: "Departamento Pessoal", author: "Equipe RH Cursos", tags: [],
+  contentFormat: "markdown", category: "Departamento Pessoal", author: "Equipe RH Cursos", tags: [],
   date: "2026-09-14T12:00:00Z", readingTime: "5 min", status: "Rascunho", image: "", relatedCourseId: ""
 };
 
@@ -98,5 +98,15 @@ describe("Gestão do blog em páginas separadas", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Pré-visualizar" }));
     expect(screen.getByText("Trecho importante").tagName).toBe("STRONG");
+  });
+
+  it("preserva posts legados em texto simples sem interpretar Markdown", () => {
+    const plainPost = { ...post, contentFormat: "plain" as const, content: "**texto literal**\n# título literal" };
+    render(<AdminBlogEditor initialPost={plainPost} />);
+    const content = screen.getAllByRole("textbox").find((element) => (element as HTMLTextAreaElement).value.includes("texto literal")) as HTMLTextAreaElement | undefined;
+    expect(content).toBeDefined();
+    if (!content) return;
+    expect(content).toHaveValue("**texto literal**\n# título literal");
+    expect(screen.queryByRole("button", { name: "Negrito" })).not.toBeInTheDocument();
   });
 });

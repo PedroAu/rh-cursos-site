@@ -314,9 +314,19 @@ export function AdminBlogEditor({ initialPost }: { initialPost?: BlogPost }) {
                 <div className="md:col-span-2"><Textarea label="Resumo" value={form.summary} onChange={(event) => updateField("summary", event.target.value)} hint="Use ao menos 20 caracteres para enviar à revisão." /></div>
                 <div className="md:col-span-2">
                   <p className="mb-2 text-sm font-medium text-tk-ink">Conteúdo</p>
-                  <BlogRichTextEditor value={form.content} onChange={updateFormattedContent} disabled={isSaving} />
+                  {form.contentFormat === "plain" ? (
+                    <Textarea
+                      label="Conteúdo em texto simples"
+                      value={form.content}
+                      onChange={(event) => updateField("content", event.target.value)}
+                      hint="Este artigo legado permanece em texto simples. Converta-o explicitamente para Markdown antes de usar a formatação visual."
+                      className="min-h-[360px]"
+                    />
+                  ) : (
+                    <BlogRichTextEditor value={form.content} onChange={updateFormattedContent} disabled={isSaving} />
+                  )}
                 </div>
-                <div className="grid content-start gap-2 text-sm text-tk-ink"><span className="font-medium">Formato</span><span className="rounded-tk-input border border-tk-line bg-tk-surface-2 px-4 py-3">Editor visual · Markdown seguro</span></div>
+                <div className="grid content-start gap-2 text-sm text-tk-ink"><span className="font-medium">Formato</span><span className="rounded-tk-input border border-tk-line bg-tk-surface-2 px-4 py-3">{form.contentFormat === "plain" ? "Texto simples legado" : "Editor visual · Markdown seguro"}</span></div>
                 <Input label="Tempo de leitura" value={form.readingTime} onChange={(event) => updateField("readingTime", event.target.value)} />
                 <Input label="Imagem (URL)" value={form.image} onChange={(event) => updateField("image", event.target.value)} />
                 <Input label="Texto alternativo da imagem" value={form.imageAlt} onChange={(event) => updateField("imageAlt", event.target.value)} />

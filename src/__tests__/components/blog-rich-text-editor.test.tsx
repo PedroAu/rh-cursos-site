@@ -1,7 +1,8 @@
 import { Editor } from "@tiptap/core";
 import { Markdown } from "@tiptap/markdown";
 import StarterKit from "@tiptap/starter-kit";
-import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { BlogRichTextEditor } from "@/components/blog/blog-rich-text-editor";
@@ -88,5 +89,47 @@ describe("BlogRichTextEditor", () => {
     expect(editor.getMarkdown()).toBe("[Texto](https://rhcursos.com.br)");
     expect(isSafeUrl("javascript:alert(1)")).toBe(false);
     editor.destroy();
+  });
+
+  it("exercita a toolbar visual, serializa alterações e sincroniza valor externo", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const { rerender } = render(<BlogRichTextEditor value="Texto" onChange={onChange} />);
+    const editor = await screen.findByRole("textbox", { name: "Conteúdo" });
+
+    await user.click(editor);
+    await user.keyboard("{Control>}a{/Control}");
+    await user.click(screen.getByRole("button", { name: "Negrito" }));
+    await waitFor(() => expect(onChange).toHaveBeenLastCalledWith("**Texto**"));
+
+    rerender(<BlogRichTextEditor value="## Atualizado" onChange={onChange} />);
+    await waitFor(() => expect(editor.innerHTML).toContain("<h2>Atualizado</h2>"));
+  });
+
+  it("mostra feedback para URLs inválidas e aceita links seguros", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<BlogRichTextEditor value="Texto" onChange={onChange} />);
+    const editor = await screen.findByRole("textbox", { name: "Conteúdo" });
+    await user.click(editor);
+    await user.keyboard("{Control>}a{/Control}");
+    await user.click(screen.getByRole("button", { name: "Link" }));
+    const input = screen.getByLabelText("URL do link");
+    await user.type(input, "javascript:alert(1)");
+    await user.click(screen.getByRole("button", { name: "Aplicar link" }));
+    expect(screen.getByText(/URL válida|Use uma URL/)).toBeVisible();
+
+    fireEvent.change(input, { target: { value: "https://rhcursos.com.br" } });
+    await user.click(screen.getByRole("button", { name: "Aplicar link" }));
+    await waitFor(() => expect(onChange).toHaveBeenLastCalledWith("[Texto](https://rhcursos.com.br)"));
+  });
+
+  it("bloqueia a interação quando desabilitado", async () => {
+    const onChange = vi.fn();
+    render(<BlogRichTextEditor value="Texto" onChange={onChange} disabled />);
+    await waitFor(() => expect(screen.getByRole("textbox", { name: "Conteúdo" })).toBeVisible());
+    expect(screen.getByRole("button", { name: "Negrito" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Link" })).toBeDisabled();
+    expect(onChange).not.toHaveBeenCalled();
   });
 });

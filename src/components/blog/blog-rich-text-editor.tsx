@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { Markdown } from "@tiptap/markdown";
+import { z } from "zod";
 import {
   Bold,
   Heading2,
@@ -37,6 +38,12 @@ type ToolbarButtonProps = {
   onClick: () => void;
   children: ReactNode;
 };
+
+const linkUrlSchema = z.string()
+  .trim()
+  .min(1, "Informe uma URL.")
+  .max(2048, "A URL deve ter no máximo 2048 caracteres.")
+  .refine((value) => value.startsWith("/") || URL.canParse(value), "Informe uma URL válida.");
 
 function ToolbarButton({ label, active = false, disabled = false, onClick, children }: ToolbarButtonProps) {
   return (
@@ -139,11 +146,12 @@ export function BlogRichTextEditor({ value, onChange, disabled = false }: RichTe
       setLinkPanelOpen(false);
       return;
     }
-    if (!isSafeUrl(url)) {
-      setLinkError("Use uma URL HTTP(S), mailto, tel ou um link interno iniciado por /.");
+    const parsedUrl = linkUrlSchema.safeParse(url);
+    if (!parsedUrl.success || !isSafeUrl(parsedUrl.data)) {
+      setLinkError(parsedUrl.success ? "Use uma URL HTTP(S), mailto, tel ou um link interno iniciado por /." : parsedUrl.error.issues[0]?.message ?? "URL inválida.");
       return;
     }
-    editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
+    editor.chain().focus().extendMarkRange("link").setLink({ href: parsedUrl.data }).run();
     setLinkPanelOpen(false);
   };
 
