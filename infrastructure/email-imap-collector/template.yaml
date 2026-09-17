@@ -124,6 +124,44 @@ Resources:
       SSESpecification:
         SSEEnabled: true
 
+  CollectorExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: CollectorRuntimeAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${AWS::StackName}-imap-collector:*
+              - Effect: Allow
+                Action:
+                  - xray:PutTelemetryRecords
+                  - xray:PutTraceSegments
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                Resource: !GetAtt CheckpointTable.Arn
+              - Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource: !Ref CollectorSecretArn
+              - Effect: Allow
+                Action: sqs:SendMessage
+                Resource: !GetAtt CollectorDlq.Arn
+
   ImapCollectorFunction:
     Type: AWS::Serverless::Function
     Metadata:
@@ -142,6 +180,7 @@ Resources:
       FunctionName: !Sub ${AWS::StackName}-imap-collector
       CodeUri: dist/
       Handler: handler.handler
+      Role: !GetAtt CollectorExecutionRole.Arn
       ReservedConcurrentExecutions: 1
       EventInvokeConfig:
         MaximumEventAgeInSeconds: 300
@@ -160,13 +199,6 @@ Resources:
           INITIAL_LOOKBACK_DAYS: !Ref InitialLookbackDays
           IMAP_BATCH_SIZE: !Ref BatchSize
           CRM_REQUEST_TIMEOUT_MS: '8000'
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref CheckpointTable
-        - Statement:
-            - Effect: Allow
-              Action: secretsmanager:GetSecretValue
-              Resource: !Ref CollectorSecretArn
       Events:
         PollSchedule:
           Type: ScheduleV2
