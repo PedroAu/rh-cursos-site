@@ -12,6 +12,7 @@ Metadata:
       - schedule nasce DISABLED; habilitar só após smoke test manual
       - segredos vivem no Secrets Manager; nenhum valor secreto em parâmetro/env/template
       - função lê só cabeçalhos; nunca baixa corpo de e-mail
+      - lease condicional no DynamoDB impede duas leitoras simultâneas
     ref:
       - at: infrastructure/email-imap-collector/README.md
         has: deploy, segredo, bootstrap, operação e rollback
@@ -151,6 +152,7 @@ Resources:
                 Resource: '*'
               - Effect: Allow
                 Action:
+                  - dynamodb:DeleteItem
                   - dynamodb:GetItem
                   - dynamodb:PutItem
                   - dynamodb:UpdateItem
@@ -168,20 +170,18 @@ Resources:
       com.aws.cloudformation.Context:
         why: tarefa curta agendada; Lambda sobre container para custo baixo; arm64+bundle único reduzem cold start
         must:
-          - ReservedConcurrentExecutions=1 para uma leitora por caixa
+          - lease distribuído no checkpoint garante uma leitora por caixa
           - timeout < intervalo do schedule e requests externos < timeout
           - role só lê segredo indicado e checkpoint próprio
           - nenhuma PII, senha ou cabeçalho bruto em logs
         mutable: change-with-constraints
         mutability:
-          ReservedConcurrentExecutions: must-never-change
           Environment: review-required
     Properties:
       FunctionName: !Sub ${AWS::StackName}-imap-collector
       CodeUri: dist/
       Handler: handler.handler
       Role: !GetAtt CollectorExecutionRole.Arn
-      ReservedConcurrentExecutions: 1
       EventInvokeConfig:
         MaximumEventAgeInSeconds: 300
         MaximumRetryAttempts: 2

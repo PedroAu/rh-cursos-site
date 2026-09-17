@@ -64,9 +64,9 @@ autenticação, limite ou `5xx` mantêm o UID para nova tentativa.
 
 ## Operação
 
-- Concorrência reservada: 1, impedindo duas leituras simultâneas da caixa.
+- Lease condicional no DynamoDB impede duas leituras simultâneas da caixa, inclusive durante retries.
 - Timeout: 50 segundos; lote padrão: 50 mensagens.
 - Retenção de logs: 30 dias.
 - Checkpoint e DLQ usam `DeletionPolicy: Retain`.
 - Alarmes: erros, throttles, duração p99 e mensagens na DLQ.
-- Kill switch: defina a concorrência reservada como 0 ou desabilite o schedule.
+- Kill switch: desabilite o schedule.
