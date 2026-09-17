@@ -5,6 +5,7 @@ import { ArrowLeft, Download, Eye, Pencil, Plus, Search, Trash2, Upload, X } fro
 import { isValidElement, useEffect, useId, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
+import { LeadTimeline } from "@/features/admin/leads/timeline/lead-timeline";
 import { UserCell } from "@/components/admin/user-cell";
 import { Button } from "@/components/ui/button";
 import {
@@ -390,6 +391,7 @@ export function AdminResourcePage({ resource }: { resource: ResourceKey }) {
           row={detailRow}
           onBack={() => setDetailId(null)}
           onEdit={() => config.onEdit(detailRow)}
+          footer={resource === "leads" ? <LeadTimeline leadId={detailRow.id} /> : undefined}
         />
       ) : null}
 
@@ -678,13 +680,15 @@ function ResourceDetail({
   columns,
   row,
   onBack,
-  onEdit
+  onEdit,
+  footer,
 }: {
   title: string;
   columns: Array<{ key: string; label: string; render: (row: unknown) => ReactNode }>;
   row: unknown;
   onBack: () => void;
   onEdit: () => void;
+  footer?: ReactNode;
 }) {
   return (
     <Panel className="overflow-hidden">
@@ -711,6 +715,7 @@ function ResourceDetail({
           </div>
         ))}
       </dl>
+      {footer}
     </Panel>
   );
 }

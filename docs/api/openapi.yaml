@@ -30,6 +30,10 @@ tags:
     description: Mutações administrativas autenticadas
   - name: Admin Read Models
     description: Leituras paginadas same-origin do painel administrativo
+  - name: Email Timeline
+    description: Histórico auditável de interações de e-mail por lead
+  - name: Email Events
+    description: Ingestão server-to-server de eventos dos provedores de e-mail
   - name: Functions Proxy
     description: BFF same-origin que encaminha para as Edge Functions
 paths:
@@ -546,6 +550,152 @@ paths:
           $ref: '#/components/responses/AdminListError'
         '503':
           $ref: '#/components/responses/AdminUnavailable'
+  /api/admin/leads/{leadId}/timeline:
+    get:
+      tags: [Email Timeline]
+      summary: Lista a linha do tempo de e-mail de um lead
+      description: >-
+        Read model same-origin protegido por sessão administrativa SSR. Retorna
+        somente resumos seguros e dados de auditoria; o corpo do e-mail e
+        credenciais dos provedores nunca fazem parte da resposta.
+      operationId: listLeadEmailTimeline
+      security:
+        - supabaseSsrCookies: []
+      parameters:
+        - $ref: '#/components/parameters/LeadId'
+        - name: types
+          in: query
+          required: false
+          description: Tipos de interação separados por vírgula.
+          schema:
+            type: string
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 100
+      responses:
+        '200':
+          description: Interações do lead em ordem cronológica decrescente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeadTimelineResponse'
+        '400': { description: Lead ou filtros inválidos }
+        '401':
+          $ref: '#/components/responses/AdminSessionInvalid'
+        '403':
+          $ref: '#/components/responses/AdminAccessDenied'
+        '500': { description: Falha ao consultar a linha do tempo }
+        '503':
+          $ref: '#/components/responses/AdminUnavailable'
+  /api/webhooks/ses:
+    post:
+      tags: [Email Events]
+      summary: Ingere um evento de envio do Amazon SES
+      description: >-
+        Endpoint server-to-server autenticado por segredo compartilhado. Aceita
+        Send, Delivery, Open, Click, Bounce e Complaint, correlaciona a mensagem
+        ao lead e persiste o evento de forma idempotente.
+      operationId: ingestSesEmailEvent
+      security:
+        - emailWebhookSecret: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SesEmailEvent'
+      responses:
+        '200':
+          description: Evento processado ou duplicata reconhecida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventIngestionResponse'
+        '400': { description: JSON inválido }
+        '401': { description: Segredo do webhook inválido }
+        '413': { description: Corpo acima do limite permitido }
+        '422': { description: Evento inválido ou sem correlação segura }
+        '503': { description: Persistência temporariamente indisponível }
+  /api/internal/email/imap-events:
+    post:
+      tags: [Email Events]
+      summary: Ingere uma resposta normalizada da caixa IMAP
+      description: >-
+        Recebe do coletor privado apenas metadados normalizados da resposta. O
+        contrato rejeita campos extras, inclusive corpo HTML ou texto integral.
+      operationId: ingestImapReplyEvent
+      security:
+        - emailWebhookSecret: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NormalizedImapEvent'
+      responses:
+        '200':
+          description: Resposta processada ou duplicata reconhecida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventIngestionResponse'
+        '400': { description: JSON inválido }
+        '401': { description: Segredo do webhook inválido }
+        '413': { description: Corpo acima do limite permitido }
+        '422': { description: Evento inválido, ambíguo ou sem correlação segura }
+        '503': { description: Persistência temporariamente indisponível }
+  /api/email/unsubscribe:
+    post:
+      tags: [Email Events]
+      summary: Confirma o descadastro de um contato
+      description: >-
+        Valida o token HMAC com expiração, registra o descadastro de forma
+        idempotente, ativa a supressão e interrompe a sequência ativa.
+      operationId: unsubscribeLeadEmail
+      security: []
+      parameters:
+        - name: token
+          in: query
+          required: false
+          description: Token assinado; também pode ser enviado como formulário.
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                token:
+                  type: string
+      responses:
+        '200':
+          description: Descadastro confirmado ou já processado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnsubscribeResponse'
+        '400': { description: Token inválido ou expirado }
+        '503': { description: Persistência temporariamente indisponível }
   /api/enrollments:
     post:
       tags: [Enrollments]
@@ -907,6 +1057,13 @@ components:
       in: header
       name: asaas-access-token
       description: Token aleatório exclusivo do webhook, configurado no Asaas e no servidor.
+    emailWebhookSecret:
+      type: apiKey
+      in: header
+      name: x-rh-webhook-secret
+      description: >-
+        Segredo aleatório server-to-server, com no mínimo 32 caracteres. SES e
+        coletor IMAP usam valores distintos embora compartilhem este contrato.
   parameters:
     FunctionName:
       name: name
@@ -957,6 +1114,15 @@ components:
       description: Filtra por status de inscrição. Valores desconhecidos são ignorados.
       schema:
         $ref: '#/components/schemas/EnrollmentStatus'
+    LeadId:
+      name: leadId
+      in: path
+      required: true
+      description: Identificador do lead no CRM.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 80
   responses:
     SessionInvalid:
       description: Sessão ausente, inválida ou expirada
@@ -1189,6 +1355,102 @@ components:
                 ok: false
                 error: Supabase Functions não configurado.
   schemas:
+    LeadInteractionType:
+      type: string
+      enum: [SENT, DELIVERED, OPENED, CLICKED, REPLIED, BOUNCED, COMPLAINED, UNSUBSCRIBED]
+    LeadInteraction:
+      type: object
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        leadId: { type: string }
+        eventType: { $ref: '#/components/schemas/LeadInteractionType' }
+        occurredAt: { type: string, format: date-time }
+        recordedAt: { type: string, format: date-time }
+        channel: { type: string, const: EMAIL }
+        direction: { type: string, enum: [OUTBOUND, INBOUND] }
+        source: { type: string, enum: [SES, IMAP, CRM, INTERNAL] }
+        safeSummary: { type: string, maxLength: 500 }
+        externalEventId:
+          type: [string, 'null']
+        correlationId: { type: string }
+        causationId:
+          type: [string, 'null']
+        actorId: { type: string }
+        actorVersion: { type: string }
+        contentRef:
+          type: [string, 'null']
+        contentHash:
+          type: [string, 'null']
+        metadata:
+          type: object
+          additionalProperties: true
+      required:
+        - id
+        - leadId
+        - eventType
+        - occurredAt
+        - recordedAt
+        - channel
+        - direction
+        - source
+        - safeSummary
+        - correlationId
+        - actorId
+        - actorVersion
+        - metadata
+    LeadTimelineResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        ok: { type: boolean, const: true }
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/LeadInteraction'
+        count: { type: integer, minimum: 0 }
+      required: [ok, data, count]
+    EventIngestionResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        ok: { type: boolean, const: true }
+        duplicate: { type: boolean }
+      required: [ok, duplicate]
+    SesEmailEvent:
+      type: object
+      additionalProperties: true
+      description: Evento SES puro ou envelope EventBridge com `source=aws.ses`.
+    NormalizedImapEvent:
+      type: object
+      additionalProperties: false
+      properties:
+        messageId: { type: string, maxLength: 255 }
+        inReplyTo: { type: string, maxLength: 255 }
+        references:
+          type: array
+          maxItems: 30
+          items: { type: string, maxLength: 255 }
+        from: { type: string, format: email, maxLength: 180 }
+        to:
+          type: array
+          minItems: 1
+          maxItems: 20
+          items: { type: string, format: email, maxLength: 180 }
+        occurredAt: { type: string, format: date-time }
+        imapUid: { type: string, maxLength: 120 }
+        mailbox: { type: string, maxLength: 120, default: INBOX }
+        subjectHash:
+          type: string
+          pattern: '^[0-9a-f]{64}$'
+      required: [messageId, from, to, occurredAt, imapUid]
+    UnsubscribeResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        ok: { type: boolean, const: true }
+        message: { type: string }
+      required: [ok, message]
     DashboardRole:
       type: string
       enum: [admin, student, instructor]

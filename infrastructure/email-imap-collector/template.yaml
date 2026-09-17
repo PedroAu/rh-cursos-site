@@ -1,0 +1,271 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  Coleta respostas da caixa IMAP e as entrega ao CRM — usa checkpoint por UID,
+  processamento serial e agendamento inicialmente desabilitado.
+
+Metadata:
+  AWSToolsMetrics:
+    AWSAgentToolkit: aws-cloudformation@2
+  com.aws.cloudformation.Context:
+    arch: EventBridge Scheduler -> Lambda -> IMAPS + CRM HTTPS; DynamoDB guarda checkpoint; SQS retém falhas
+    must:
+      - schedule nasce DISABLED; habilitar só após smoke test manual
+      - segredos vivem no Secrets Manager; nenhum valor secreto em parâmetro/env/template
+      - função lê só cabeçalhos; nunca baixa corpo de e-mail
+    ref:
+      - at: infrastructure/email-imap-collector/README.md
+        has: deploy, segredo, bootstrap, operação e rollback
+        scope: package
+
+Parameters:
+  CollectorSecretArn:
+    Type: String
+    Description: ARN do segredo JSON existente no AWS Secrets Manager.
+  ScheduleExpression:
+    Type: String
+    Default: rate(1 minute)
+  ScheduleState:
+    Type: String
+    Default: DISABLED
+    AllowedValues: [ENABLED, DISABLED]
+  Mailbox:
+    Type: String
+    Default: INBOX
+  AccountKey:
+    Type: String
+    Default: locaweb:pedro:INBOX
+  InitialLookbackDays:
+    Type: Number
+    Default: 15
+    MinValue: 1
+    MaxValue: 90
+  BatchSize:
+    Type: Number
+    Default: 50
+    MinValue: 1
+    MaxValue: 200
+
+Transform: AWS::Serverless-2016-10-31
+
+Globals:
+  Function:
+    Runtime: nodejs22.x
+    Architectures: [arm64]
+    MemorySize: 512
+    Timeout: 50
+    Tracing: Active
+    LoggingConfig:
+      LogFormat: JSON
+      ApplicationLogLevel: INFO
+      SystemLogLevel: WARN
+
+Resources:
+  CollectorDlq:
+    Type: AWS::SQS::Queue
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: retém invocações que falham após retries para diagnóstico e replay controlado
+        must:
+          - retenção >= 14d e criptografia at-rest ativa
+          - preservar em delete/replace; fila contém evidência operacional
+        mutable: change-with-constraints
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      KmsMasterKeyId: alias/aws/sqs
+      MessageRetentionPeriod: 1209600
+
+  CollectorDlqPolicy:
+    Type: AWS::SQS::QueuePolicy
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: bloqueia acesso não-TLS à fila de falhas
+        must:
+          - manter deny quando aws:SecureTransport=false
+        mutable: must-never-change
+    Properties:
+      Queues:
+        - !Ref CollectorDlq
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: DenyInsecureTransport
+            Effect: Deny
+            Principal: '*'
+            Action: sqs:*
+            Resource: !GetAtt CollectorDlq.Arn
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'
+
+  CheckpointTable:
+    Type: AWS::DynamoDB::Table
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: checkpoint monotônico por conta+mailbox; PAY_PER_REQUEST evita capacidade ociosa; PITR protege progresso
+        must:
+          - nunca regredir UID dentro da mesma UIDVALIDITY
+          - preservar em delete/replace; reset causa releitura ou perda de respostas
+        mutable: change-with-constraints
+        mutability:
+          KeySchema: must-never-change
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: accountKey
+          AttributeType: S
+      KeySchema:
+        - AttributeName: accountKey
+          KeyType: HASH
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+
+  ImapCollectorFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: tarefa curta agendada; Lambda sobre container para custo baixo; arm64+bundle único reduzem cold start
+        must:
+          - ReservedConcurrentExecutions=1 para uma leitora por caixa
+          - timeout < intervalo do schedule e requests externos < timeout
+          - role só lê segredo indicado e checkpoint próprio
+          - nenhuma PII, senha ou cabeçalho bruto em logs
+        mutable: change-with-constraints
+        mutability:
+          ReservedConcurrentExecutions: must-never-change
+          Environment: review-required
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-imap-collector
+      CodeUri: dist/
+      Handler: handler.handler
+      ReservedConcurrentExecutions: 1
+      EventInvokeConfig:
+        MaximumEventAgeInSeconds: 300
+        MaximumRetryAttempts: 2
+        DestinationConfig:
+          OnFailure:
+            Type: SQS
+            Destination: !GetAtt CollectorDlq.Arn
+      Environment:
+        Variables:
+          CHECKPOINT_TABLE: !Ref CheckpointTable
+          COLLECTOR_SECRET_ARN: !Ref CollectorSecretArn
+          IMAP_MAILBOX: !Ref Mailbox
+          IMAP_ACCOUNT_KEY: !Ref AccountKey
+          IMAP_FALLBACK_RECIPIENT: pedro@rhcursos.com.br
+          INITIAL_LOOKBACK_DAYS: !Ref InitialLookbackDays
+          IMAP_BATCH_SIZE: !Ref BatchSize
+          CRM_REQUEST_TIMEOUT_MS: '8000'
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CheckpointTable
+        - Statement:
+            - Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !Ref CollectorSecretArn
+      Events:
+        PollSchedule:
+          Type: ScheduleV2
+          Properties:
+            ScheduleExpression: !Ref ScheduleExpression
+            State: !Ref ScheduleState
+            FlexibleTimeWindow:
+              Mode: 'OFF'
+            RetryPolicy:
+              MaximumEventAgeInSeconds: 300
+              MaximumRetryAttempts: 2
+            DeadLetterConfig:
+              Arn: !GetAtt CollectorDlq.Arn
+
+  CollectorLogGroup:
+    Type: AWS::Logs::LogGroup
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: limita custo e exposição temporal de logs estruturados do coletor
+        must:
+          - logs não podem conter endereço de remetente, assunto, corpo ou segredo
+        mutable: free-to-tune
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${AWS::StackName}-imap-collector
+      RetentionInDays: 30
+
+  CollectorErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Coletor IMAP apresentou erro.
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref ImapCollectorFunction
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+
+  CollectorThrottlesAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Coletor IMAP foi limitado por concorrência.
+      Namespace: AWS/Lambda
+      MetricName: Throttles
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref ImapCollectorFunction
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+
+  CollectorDurationAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: P99 do coletor IMAP excedeu 80 por cento do timeout.
+      Namespace: AWS/Lambda
+      MetricName: Duration
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref ImapCollectorFunction
+      ExtendedStatistic: p99
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 40000
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+
+  CollectorDlqAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Existem execuções do coletor IMAP na DLQ.
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt CollectorDlq.QueueName
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+
+Outputs:
+  FunctionName:
+    Description: Nome da função para smoke test e kill switch operacional.
+    Value: !Ref ImapCollectorFunction
+  CheckpointTableName:
+    Description: Tabela que preserva UIDVALIDITY e último UID confirmado.
+    Value: !Ref CheckpointTable
+  DeadLetterQueueUrl:
+    Description: Fila de falhas para diagnóstico e replay controlado.
+    Value: !Ref CollectorDlq

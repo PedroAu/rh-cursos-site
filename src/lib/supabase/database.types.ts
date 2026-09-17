@@ -353,6 +353,141 @@ export type Database = {
         };
         Update: Partial<Database["public"]["Tables"]["lead"]["Insert"]>;
       };
+      lead_email_sequence: {
+        Row: {
+          id: string;
+          lead_id: string;
+          campaign_key: string;
+          status: "ACTIVE" | "INTERRUPTED" | "COMPLETED";
+          started_at: string;
+          completed_at: string | null;
+          interrupted_at: string | null;
+          interruption_reason: string | null;
+          interruption_event_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          lead_id: string;
+          campaign_key: string;
+          status?: "ACTIVE" | "INTERRUPTED" | "COMPLETED";
+          started_at?: string;
+          completed_at?: string | null;
+          interrupted_at?: string | null;
+          interruption_reason?: string | null;
+          interruption_event_id?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["lead_email_sequence"]["Insert"]>;
+      };
+      lead_email_sequence_step: {
+        Row: {
+          id: string;
+          sequence_id: string;
+          step_index: number;
+          due_at: string;
+          status: "PENDING" | "SENT" | "CANCELLED" | "SKIPPED";
+          sent_at: string | null;
+          cancelled_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          sequence_id: string;
+          step_index: number;
+          due_at: string;
+          status?: "PENDING" | "SENT" | "CANCELLED" | "SKIPPED";
+          sent_at?: string | null;
+          cancelled_at?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["lead_email_sequence_step"]["Insert"]>;
+      };
+      lead_email_message: {
+        Row: {
+          id: string;
+          lead_id: string;
+          sequence_id: string | null;
+          sequence_step_id: string | null;
+          provider: "SES" | "IMAP";
+          provider_message_id: string;
+          rfc_message_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          lead_id: string;
+          sequence_id?: string | null;
+          sequence_step_id?: string | null;
+          provider: "SES" | "IMAP";
+          provider_message_id: string;
+          rfc_message_id?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["lead_email_message"]["Insert"]>;
+      };
+      lead_email_suppression: {
+        Row: {
+          lead_id: string;
+          reason: "BOUNCED" | "COMPLAINED" | "UNSUBSCRIBED";
+          source_event_id: string;
+          suppressed_at: string;
+          created_at: string;
+        };
+        Insert: {
+          lead_id: string;
+          reason: "BOUNCED" | "COMPLAINED" | "UNSUBSCRIBED";
+          source_event_id: string;
+          suppressed_at: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["lead_email_suppression"]["Insert"]>;
+      };
+      lead_interaction: {
+        Row: {
+          id: string;
+          lead_id: string;
+          message_id: string | null;
+          sequence_id: string | null;
+          external_event_id: string | null;
+          event_type: "SENT" | "DELIVERED" | "OPENED" | "CLICKED" | "REPLIED" | "BOUNCED" | "COMPLAINED" | "UNSUBSCRIBED";
+          occurred_at: string;
+          recorded_at: string;
+          channel: "EMAIL";
+          direction: "OUTBOUND" | "INBOUND";
+          source: "SES" | "IMAP" | "CRM" | "INTERNAL";
+          correlation_id: string;
+          causation_id: string | null;
+          actor_id: string;
+          actor_version: string;
+          safe_summary: string;
+          content_ref: string | null;
+          content_hash: string | null;
+          metadata: Json;
+          idempotency_key: string;
+          event_hash: string;
+        };
+        Insert: {
+          id?: string;
+          lead_id: string;
+          message_id?: string | null;
+          sequence_id?: string | null;
+          external_event_id?: string | null;
+          event_type: Database["public"]["Tables"]["lead_interaction"]["Row"]["event_type"];
+          occurred_at: string;
+          recorded_at?: string;
+          channel?: "EMAIL";
+          direction: "OUTBOUND" | "INBOUND";
+          source: "SES" | "IMAP" | "CRM" | "INTERNAL";
+          correlation_id: string;
+          causation_id?: string | null;
+          actor_id: string;
+          actor_version: string;
+          safe_summary: string;
+          content_ref?: string | null;
+          content_hash?: string | null;
+          metadata?: Json;
+          idempotency_key: string;
+          event_hash: string;
+        };
+        Update: never;
+      };
       post_blog: {
         Row: {
           id: string;
@@ -634,6 +769,33 @@ export type Database = {
           payment_gateway_status: string | null;
           processed: boolean;
           duplicate: boolean;
+        }>;
+      };
+      ingest_lead_interaction: {
+        Args: {
+          p_lead_id: string;
+          p_message_id: string | null;
+          p_sequence_id: string | null;
+          p_external_event_id: string | null;
+          p_event_type: string;
+          p_occurred_at: string;
+          p_direction: string;
+          p_source: string;
+          p_correlation_id: string;
+          p_causation_id: string | null;
+          p_actor_id: string;
+          p_actor_version: string;
+          p_safe_summary: string;
+          p_content_ref: string | null;
+          p_content_hash: string | null;
+          p_metadata: Json;
+          p_idempotency_key: string;
+          p_event_hash: string;
+        };
+        Returns: Array<{
+          interaction_id: string;
+          duplicate: boolean;
+          sequence_interrupted: boolean;
         }>;
       };
       is_admin: {
