@@ -10,7 +10,8 @@
     "build": "node ./scripts/build.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --no-file-parallelism --maxWorkers=1",
-    "verify": "npm run typecheck && npm run test && npm run build"
+    "smoke:load": "node --input-type=module -e \"const module = await import('./dist/handler.mjs'); if (typeof module.handler !== 'function') process.exit(1)\"",
+    "verify": "npm run typecheck && npm run test && npm run build && npm run smoke:load"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.984.0",
