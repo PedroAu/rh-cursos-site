@@ -68,4 +68,3 @@ describe("lead timeline domain", () => {
     expect(parseTimelineTypes("OPENED,INVALID,OPENED,SENT")).toEqual(["OPENED", "SENT"]);
   });
 });
-

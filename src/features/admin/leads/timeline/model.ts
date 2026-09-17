@@ -59,7 +59,6 @@ export const safeSummarySchema = z
 export function isTerminalInteraction(type: LeadInteractionType): boolean {
   return TERMINAL_INTERACTION_TYPES.has(type);
 }
-
 export function shouldSuppressLead(type: LeadInteractionType): boolean {
   return SUPPRESSION_INTERACTION_TYPES.has(type);
 }
@@ -90,4 +89,3 @@ export function parseTimelineTypes(value: string | null): LeadInteractionType[] 
   const allowed = new Set<string>(LEAD_INTERACTION_TYPES);
   return Array.from(new Set(value.split(",").filter((item): item is LeadInteractionType => allowed.has(item))));
 }
-

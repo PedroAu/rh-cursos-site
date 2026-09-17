@@ -73,4 +73,3 @@ describe("LeadTimeline", () => {
     expect(screen.getByText("Os demais dados do lead continuam disponíveis.")).toBeInTheDocument();
   });
 });
-

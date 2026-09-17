@@ -32,10 +32,8 @@ export type LeadInteraction = {
   contentHash: string | null;
   metadata: Record<string, unknown>;
 };
-
 export type TimelineFilters = {
   types: LeadInteractionType[];
   from?: string;
   to?: string;
 };
-

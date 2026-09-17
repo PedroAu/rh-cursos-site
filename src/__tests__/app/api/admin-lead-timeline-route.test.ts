@@ -10,7 +10,6 @@ vi.mock("@/features/admin/leads/timeline/server", async (importOriginal) => {
   const original = await importOriginal<typeof import("@/features/admin/leads/timeline/server")>();
   return { ...original, listLeadTimeline: mocks.listLeadTimeline };
 });
-
 describe("GET /api/admin/leads/[leadId]/timeline", () => {
   beforeEach(() => {
     mocks.requireAdminApi.mockReset();
@@ -60,4 +59,3 @@ describe("GET /api/admin/leads/[leadId]/timeline", () => {
     expect(mocks.listLeadTimeline).not.toHaveBeenCalled();
   });
 });
-

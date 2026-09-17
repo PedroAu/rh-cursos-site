@@ -14,7 +14,6 @@ const MAX_BODY_BYTES = 32 * 1024;
 function json(body: unknown, init?: ResponseInit) {
   return applyApiSecurityHeaders(NextResponse.json(body, init));
 }
-
 export async function POST(request: Request) {
   if (!isValidWebhookSecret(request.headers.get("x-rh-webhook-secret"), process.env.IMAP_EVENTS_WEBHOOK_SECRET)) {
     return json({ ok: false }, { status: 401 });
@@ -41,4 +40,3 @@ export async function POST(request: Request) {
     return json({ ok: false }, { status: invalid ? 422 : 503 });
   }
 }
-
