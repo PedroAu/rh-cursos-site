@@ -8,6 +8,7 @@ import { requireAdminApi } from "@/lib/supabase/admin-api-auth";
 export async function GET(request: Request, context: { params: Promise<{ leadId: string }> }) {
   return applyNoStore(await handleGet(request, context));
 }
+
 async function handleGet(request: Request, context: { params: Promise<{ leadId: string }> }) {
   const guard = await requireAdminApi();
   if (!guard.ok) return guard.response;

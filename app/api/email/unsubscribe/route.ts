@@ -10,6 +10,7 @@ export const runtime = "nodejs";
 function json(body: unknown, init?: ResponseInit) {
   return applyApiSecurityHeaders(NextResponse.json(body, init));
 }
+
 export async function POST(request: Request) {
   let token = new URL(request.url).searchParams.get("token") ?? "";
   if (!token && request.headers.get("content-type")?.includes("application/x-www-form-urlencoded")) {

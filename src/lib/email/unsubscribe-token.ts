@@ -14,6 +14,7 @@ type Payload = z.infer<typeof payloadSchema>;
 function sign(encodedPayload: string, secret: string): string {
   return createHmac("sha256", secret).update(encodedPayload).digest("base64url");
 }
+
 export function createUnsubscribeToken(payload: Payload, secret: string): string {
   const validPayload = payloadSchema.parse(payload);
   const encoded = Buffer.from(JSON.stringify(validPayload), "utf8").toString("base64url");
