@@ -10,6 +10,8 @@ Este runbook cobre a reativação por e-mail dos contatos elegíveis para:
 
 O CRM e o event store são as fontes oficiais. “Gestão de Pessoas” é uma
 classificação temática e nunca substitui permissão comercial ou base legal.
+O estado e a ordem de ativação ficam no
+[`sales-reactivation-go-live-checklist.md`](sales-reactivation-go-live-checklist.md).
 
 ## Fluxo operacional
 
