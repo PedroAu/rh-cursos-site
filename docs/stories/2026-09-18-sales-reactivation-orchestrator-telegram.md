@@ -181,6 +181,7 @@ quality_gate_tools:
 | 2026-09-18 | 0.2 | PO tornou explícitos os três cursos e o endereço corporativo; história aprovada para implementação em dry-run, com ativação produtiva ainda condicionada. | Pax (@po) |
 | 2026-09-18 | 0.3 | Implementação local concluída e movida para revisão; descoberta de coorte exige comando manual explícito e produção permanece desativada. | Dex (@dev) |
 | 2026-09-18 | 0.4 | Commit candidato `ca426b0` preparado para handoff; push, deploy e ativação não executados. | Gage (@devops) |
+| 2026-09-18 | 0.5 | Corrigida a corrida autosave/salvamento manual do blog que quebrava o E2E da PR; rascunhos novos agora usam ID estável e retry idempotente. | Dex (@dev) |
 
 ## Dev Agent Record
 
@@ -193,6 +194,7 @@ Codex / GPT-5
 - Corrigidos conflitos de tipos/casts e condições de concorrência detectados pelos testes pgTAP durante o desenvolvimento da migration.
 - O build local inicialmente falhou no prerender porque o ambiente E2E apontava para o PostgREST local indisponível; a validação foi repetida com stub HTTP local, somente leitura, e concluiu 46/46 páginas.
 - A descoberta de contatos foi retirada do caminho agendado e exige `run-batch --confirm-live --discover`, impedindo ampliação silenciosa da coorte e varredura repetitiva da base.
+- O único check remoto vermelho foi reproduzido no teste de criação de artigo: uma falha do autosave era herdada pelo clique manual sem nova tentativa. O fluxo agora repete manualmente com o mesmo ID estável, e o E2E valida resposta HTTP, ID e rota canônica.
 
 ### Completion Notes List
 
@@ -202,6 +204,8 @@ Codex / GPT-5
 - API administrativa de status, projeções descritivas, OpenAPI, arquitetura e runbook concluídos.
 - Nenhuma chamada real a SES/Telegram, migration remota, deploy, ativação, push ou merge foi executada nesta story.
 - Commit candidato de implementação: `ca426b0` (`feat(sales): add safe reactivation orchestrator`).
+- Correção do gate E2E: `31c217b` (`fix(blog): retry failed autosave safely`).
+- O gate E2E pendente da PR foi corrigido e validado localmente em modo equivalente à CI; o check remoto só poderá ser renovado após push autorizado.
 - Ativação ainda depende de dry-run na base real, revisão de elegibilidade, ID numérico do chat privado, identidade SES, testes sintéticos e nova autorização explícita.
 
 ### File List
@@ -223,12 +227,15 @@ Codex / GPT-5
 - `infrastructure/sales-reactivation-orchestrator/vitest.config.ts`
 - `package.json`
 - `src/__tests__/app/api/admin-sales-reactivation-status-route.test.ts`
+- `src/__tests__/features/admin-blog.test.tsx`
 - `src/__tests__/features/sales-reactivation-core.test.ts`
+- `src/features/admin/blog/admin-blog-editor.tsx`
 - `src/features/sales/reactivation/*.ts`
 - `src/lib/email/unsubscribe-token-core.ts`
 - `src/lib/email/unsubscribe-token.ts`
 - `supabase/migrations/20260918120000_sales_reactivation_orchestrator.sql`
 - `supabase/tests/database/sales-reactivation-orchestrator.test.sql`
+- `tests/admin-crud.spec.ts`
 
 ## QA Results
 
@@ -245,11 +252,12 @@ Codex / GPT-5
 
 - `npm run lint`: PASS.
 - `npm run typecheck`: PASS.
-- Vitest completo: PASS, 98 arquivos e 898 testes.
+- Vitest completo: PASS, 98 arquivos e 899 testes.
 - `npm run test:db`: PASS, 17 arquivos e 229 testes, incluindo concorrência.
 - Worker: PASS, typecheck, 2 arquivos e 10 testes, bundle e smoke-load.
 - OpenAPI lint e drift: PASS, 23 rotas reconciliadas.
 - `cfn-lint infrastructure/sales-reactivation-orchestrator/template.yaml`: PASS.
-- Build de produção: PASS, 46/46 páginas, com dependência externa local substituída por stub somente leitura.
+- Build de produção: PASS, 48/48 páginas no Supabase local isolado.
+- E2E funcional equivalente à CI: PASS, 131 testes e 8 snapshots intencionalmente ignorados; o caso do blog que falhava na PR passou.
 - `secretlint` nos arquivos novos e `git diff --check`: PASS.
 - Revisão formal de QA e qualquer ação remota/produtiva permanecem pendentes.
