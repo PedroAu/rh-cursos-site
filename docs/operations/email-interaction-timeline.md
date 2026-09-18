@@ -33,6 +33,19 @@ Configurar no runtime, nunca no repositório ou com prefixo `NEXT_PUBLIC_`:
 
 Gere cada segredo com pelo menos 32 bytes aleatórios e use valores distintos.
 
+Antes de publicar o Worker, execute:
+
+```bash
+npm run check:workers:secrets
+```
+
+O gate consulta somente os nomes cadastrados no Cloudflare e nunca recupera ou
+exibe valores. Na leitura de 18 de setembro de 2026, o Worker de produção ainda
+não possuía `SES_EVENTS_WEBHOOK_SECRET` nem `EMAIL_UNSUBSCRIBE_SECRET`; portanto,
+um novo deploy deve permanecer bloqueado até que o proprietário configure ambos.
+Os endpoints correspondentes já falham de forma segura quando o segredo está
+ausente.
+
 ## Amazon SES
 
 1. No configuration set usado pelo envio, habilitar os eventos `Send`,
@@ -90,7 +103,7 @@ Tokens repetidos são idempotentes; tokens expirados ou adulterados falham.
 1. Backup lógico e validação das migrations pendentes.
 2. Aplicar `20260916120000_lead_email_interaction_timeline.sql` em homologação.
 3. Executar testes pgTAP, unitários, typecheck e build.
-4. Configurar secrets server-side.
+4. Configurar secrets server-side e confirmar `npm run check:workers:secrets`.
 5. Publicar a aplicação e a stack do coletor com `ScheduleState=DISABLED`.
 6. Validar BFF, timeline e uma invocação manual do coletor em homologação.
 7. Ativar EventBridge do SES; habilitar o schedule IMAP somente depois da homologação.

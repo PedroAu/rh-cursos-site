@@ -92,6 +92,31 @@ No repositório GitHub, vá em **Settings** → **Secrets and variables** → **
 
 Antes de publicar o frontend, rode `npm run env:check:production` para barrar deploy com secret ausente ou placeholder.
 
+#### Secrets do runtime do Cloudflare Worker
+
+Além dos secrets do GitHub Actions, o Worker `site-rh-cursos` precisa manter estes
+secrets diretamente no Cloudflare:
+
+| Secret | Uso |
+|--------|-----|
+| `SUPABASE_SERVICE_ROLE_KEY` | BFF e receptores server-side protegidos |
+| `ASAAS_API_KEY` | Criação de cobranças no Asaas |
+| `ASAAS_WEBHOOK_TOKEN` | Autenticação do webhook Asaas |
+| `IMAP_EVENTS_WEBHOOK_SECRET` | Autenticação do coletor de respostas Locaweb |
+| `SES_EVENTS_WEBHOOK_SECRET` | Autenticação dos eventos do Amazon SES |
+| `EMAIL_UNSUBSCRIBE_SECRET` | Assinatura e validação do descadastro |
+
+Valide os nomes presentes antes de qualquer publicação. O comando não lê nem
+exibe valores:
+
+```bash
+npm run check:workers:secrets
+```
+
+O workflow de frontend executa esse gate antes do build/deploy e falha de forma
+segura quando um nome obrigatório está ausente. `AUTH_SESSION_SECRET` é legado e
+não integra essa lista porque não possui consumidor no runtime atual.
+
 #### Edge Functions (Supabase)
 
 | Secret | Descrição |
@@ -154,6 +179,9 @@ npm install -g wrangler
 
 # Valide credenciais Cloudflare
 wrangler whoami
+
+# Valide os secrets obrigatórios já configurados no Worker
+npm run check:workers:secrets
 
 # Build e deploy
 npm run build:workers
@@ -293,6 +321,7 @@ curl https://seu-projeto.supabase.co/auth/v1/verify
 - [ ] `npm run build` completou sem erros
 - [ ] `npm run preview:workers` funciona em http://localhost:8787
 - [ ] GitHub secrets configurados (ver tabela acima)
+- [ ] `npm run check:workers:secrets` confirmou todos os secrets do runtime
 - [ ] Cloudflare Workers routes estão corretas
 - [ ] `.env.production.local` foi criado (nunca commite!)
 - [ ] Push para `main` via pull request (com review)
@@ -313,9 +342,10 @@ curl https://seu-projeto.supabase.co/auth/v1/verify
 
 Cada push em `main` dispara:
 1. `npm ci`
-2. `npm run deploy:workers -- --keep-vars` (frontend)
-3. `npm run verify:workers` (validação pós-deploy)
-4. `supabase functions deploy` (edge functions)
+2. `npm run check:workers:secrets` (gate fail-closed de configuração)
+3. `npm run deploy:workers -- --keep-vars` (frontend)
+4. `npm run verify:workers` (validação pós-deploy)
+5. `supabase functions deploy` (edge functions)
 
 ### Configuração do Worker (wrangler.jsonc)
 

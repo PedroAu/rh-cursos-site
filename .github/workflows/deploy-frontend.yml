@@ -39,6 +39,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Validate required Worker secrets
+        run: npm run check:workers:secrets
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
       - name: Validate production environment
         run: npm run env:check:production
         env:

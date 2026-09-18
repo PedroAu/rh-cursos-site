@@ -238,4 +238,16 @@ describe("REC-401 production delivery graph", () => {
       expect(reference).toMatch(/@[a-f0-9]{40}$/);
     }
   });
+
+  it("blocks the frontend deploy when required Worker secrets are absent", () => {
+    expect(deployFrontend).toContain("- name: Validate required Worker secrets");
+    expect(deployFrontend).toContain("run: npm run check:workers:secrets");
+    expect(deployFrontend).toContain("CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}");
+    expect(deployFrontend).toContain("CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}");
+
+    const preflightPosition = deployFrontend.indexOf("run: npm run check:workers:secrets");
+    const deployPosition = deployFrontend.indexOf("run: npm run deploy:workers");
+    expect(preflightPosition).toBeGreaterThan(-1);
+    expect(deployPosition).toBeGreaterThan(preflightPosition);
+  });
 });

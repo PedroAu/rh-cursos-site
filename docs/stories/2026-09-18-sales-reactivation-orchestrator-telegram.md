@@ -182,6 +182,7 @@ quality_gate_tools:
 | 2026-09-18 | 0.3 | Implementação local concluída e movida para revisão; descoberta de coorte exige comando manual explícito e produção permanece desativada. | Dex (@dev) |
 | 2026-09-18 | 0.4 | Commit candidato `ca426b0` preparado para handoff; push, deploy e ativação não executados. | Gage (@devops) |
 | 2026-09-18 | 0.5 | Corrigida a corrida autosave/salvamento manual do blog que quebrava o E2E da PR; rascunhos novos agora usam ID estável e retry idempotente. | Dex (@dev) |
+| 2026-09-18 | 0.6 | Adicionado gate fail-closed que valida os nomes dos secrets obrigatórios do Cloudflare Worker antes do deploy; leitura de produção identificou `SES_EVENTS_WEBHOOK_SECRET` e `EMAIL_UNSUBSCRIBE_SECRET` ausentes, sem acessar valores. | Gage (@devops) |
 
 ## Dev Agent Record
 
@@ -206,11 +207,14 @@ Codex / GPT-5
 - Commit candidato de implementação: `ca426b0` (`feat(sales): add safe reactivation orchestrator`).
 - Correção do gate E2E: `31c217b` (`fix(blog): retry failed autosave safely`).
 - O gate E2E pendente da PR foi corrigido e validado localmente em modo equivalente à CI; o check remoto só poderá ser renovado após push autorizado.
+- O pipeline de frontend agora bloqueia publicação quando faltam secrets obrigatórios do Worker; o verificador consulta somente metadados e nunca imprime valores.
+- A inspeção read-only do Worker de produção confirmou quatro dos seis nomes exigidos e identificou `SES_EVENTS_WEBHOOK_SECRET` e `EMAIL_UNSUBSCRIBE_SECRET` como pendências de configuração.
 - Ativação ainda depende de dry-run na base real, revisão de elegibilidade, ID numérico do chat privado, identidade SES, testes sintéticos e nova autorização explícita.
 
 ### File List
 
 - `.env.example`
+- `.github/workflows/deploy-frontend.yml`
 - `app/api/admin/sales/reactivation/status/route.ts`
 - `docs/ARCHITECTURE.md`
 - `docs/api/openapi.yaml`
@@ -226,9 +230,13 @@ Codex / GPT-5
 - `infrastructure/sales-reactivation-orchestrator/tsconfig.json`
 - `infrastructure/sales-reactivation-orchestrator/vitest.config.ts`
 - `package.json`
+- `scripts/check-workers-required-secrets.mjs`
+- `scripts/check-workers-required-secrets.d.mts`
 - `src/__tests__/app/api/admin-sales-reactivation-status-route.test.ts`
 - `src/__tests__/features/admin-blog.test.tsx`
 - `src/__tests__/features/sales-reactivation-core.test.ts`
+- `src/__tests__/ci/production-workflow.test.ts`
+- `src/__tests__/scripts/check-workers-required-secrets.test.ts`
 - `src/features/admin/blog/admin-blog-editor.tsx`
 - `src/features/sales/reactivation/*.ts`
 - `src/lib/email/unsubscribe-token-core.ts`
@@ -259,5 +267,6 @@ Codex / GPT-5
 - `cfn-lint infrastructure/sales-reactivation-orchestrator/template.yaml`: PASS.
 - Build de produção: PASS, 48/48 páginas no Supabase local isolado.
 - E2E funcional equivalente à CI: PASS, 131 testes e 8 snapshots intencionalmente ignorados; o caso do blog que falhava na PR passou.
+- Gate de secrets do Worker: PASS em 2 arquivos/11 testes direcionados; execução contra produção falhou de forma segura somente pelos dois nomes pendentes.
 - `secretlint` nos arquivos novos e `git diff --check`: PASS.
 - Revisão formal de QA e qualquer ação remota/produtiva permanecem pendentes.

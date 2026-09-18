@@ -21,6 +21,7 @@
     "preview": "next start",
     "preview:workers": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy:workers": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "check:workers:secrets": "node scripts/check-workers-required-secrets.mjs",
     "verify:workers": "node scripts/verify-workers-deploy.js",
     "cf:typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
     "lint": "eslint .",
