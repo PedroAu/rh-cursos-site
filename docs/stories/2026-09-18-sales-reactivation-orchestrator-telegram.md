@@ -189,6 +189,7 @@ quality_gate_tools:
 | 2026-09-18 | 1.0 | Implementado pipeline de importação auditável com dry-run, RPCs service-role, preservação de PII, classificação separada, histórico importado e dupla confirmação para APPLY; nenhuma execução remota realizada. | Dex (@dev) |
 | 2026-09-18 | 1.1 | Adicionado teste concorrente em duas conexões reais: duas importações simultâneas do mesmo e-mail convergem para um único lead, com decisões CREATED/EXISTING e uma única permissão UNKNOWN. | Quinn (@qa) |
 | 2026-09-18 | 1.2 | Consolidado checklist de go-live com estado verificável, ordem de rollout e autorizações separadas para push, merge, infraestrutura, dry-run, importação, primeiro lote e schedule. | Gage (@devops) |
+| 2026-09-18 | 1.3 | Versionado o caminho SES → EventBridge → API Destination → Cloudflare com filtro por identidade/configuração, segredo por referência dinâmica, retry, DLQ/alarme e extensão mínima revisável do papel de deploy; nenhum recurso externo foi criado. | Gage (@devops) |
 
 ## Dev Agent Record
 
@@ -235,6 +236,7 @@ Codex / GPT-5
 - `docs/operations/sales-reactivation-go-live-checklist.md`
 - `docs/stories/2026-09-18-sales-reactivation-orchestrator-telegram.md`
 - `infrastructure/sales-reactivation-orchestrator/README.md`
+- `infrastructure/sales-reactivation-orchestrator/deployer-policy-extension.json`
 - `infrastructure/sales-reactivation-orchestrator/package.json`
 - `infrastructure/sales-reactivation-orchestrator/package-lock.json`
 - `infrastructure/sales-reactivation-orchestrator/scripts/build.mjs`

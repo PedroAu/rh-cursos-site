@@ -14,7 +14,18 @@ Parameters:
     Description: ARN da identidade SES verificada usada por pedro@rhcursos.com.br.
   SesConfigurationSetName:
     Type: String
+    Default: rh-cursos-transactional
     Description: Configuration Set SES que publica entrega, bounce e complaint.
+  SesSenderAddress:
+    Type: String
+    Default: pedro@rhcursos.com.br
+    AllowedPattern: '^[^@\s]+@rhcursos\.com\.br$'
+    Description: Remetente autorizado usado para limitar a regra de eventos SES.
+  SesEventsEndpoint:
+    Type: String
+    Default: https://www.rhcursos.com.br/api/webhooks/ses
+    AllowedPattern: '^https://[^\s]+$'
+    Description: Endpoint HTTPS atual que recebe o envelope EventBridge do SES.
   ScheduleExpression:
     Type: String
     Default: rate(5 minutes)
@@ -50,6 +61,128 @@ Globals:
       SystemLogLevel: WARN
 
 Resources:
+  SesConfigurationSet:
+    Type: AWS::SES::ConfigurationSet
+    Properties:
+      Name: !Ref SesConfigurationSetName
+
+  SesEventBridgeDestination:
+    Type: AWS::SES::ConfigurationSetEventDestination
+    Properties:
+      ConfigurationSetName: !Ref SesConfigurationSet
+      EventDestination:
+        Name: crm-eventbridge
+        Enabled: true
+        MatchingEventTypes:
+          - send
+          - delivery
+          - open
+          - click
+          - bounce
+          - complaint
+        EventBridgeDestination:
+          EventBusArn: !Sub arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:event-bus/default
+
+  SesEventsConnection:
+    Type: AWS::Events::Connection
+    Properties:
+      Name: !Sub ${AWS::StackName}-ses-webhook
+      AuthorizationType: API_KEY
+      AuthParameters:
+        ApiKeyAuthParameters:
+          ApiKeyName: x-rh-webhook-secret
+          ApiKeyValue: !Sub '{{resolve:secretsmanager:${OrchestratorSecretArn}:SecretString:sesEventsWebhookSecret}}'
+
+  SesEventsApiDestination:
+    Type: AWS::Events::ApiDestination
+    Properties:
+      Name: !Sub ${AWS::StackName}-ses-webhook
+      ConnectionArn: !GetAtt SesEventsConnection.Arn
+      HttpMethod: POST
+      InvocationEndpoint: !Ref SesEventsEndpoint
+      InvocationRateLimitPerSecond: 2
+
+  SesEventsDlq:
+    Type: AWS::SQS::Queue
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      KmsMasterKeyId: alias/aws/sqs
+      MessageRetentionPeriod: 1209600
+
+  SesEventsInvokeRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: InvokeSesEventsApiDestination
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: events:InvokeApiDestination
+                Resource: !GetAtt SesEventsApiDestination.Arn
+
+  SesEventsRule:
+    Type: AWS::Events::Rule
+    DependsOn: SesEventBridgeDestination
+    Properties:
+      Description: Encaminha somente eventos da identidade e do configuration set aprovados ao CRM.
+      EventBusName: default
+      EventPattern:
+        source:
+          - aws.ses
+        resources:
+          - !Ref SesIdentityArn
+        detail:
+          mail:
+            source:
+              - !Ref SesSenderAddress
+            tags:
+              'ses:configuration-set':
+                - !Ref SesConfigurationSetName
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt SesEventsApiDestination.Arn
+          DeadLetterConfig:
+            Arn: !GetAtt SesEventsDlq.Arn
+          Id: SesEventsWebhook
+          RetryPolicy:
+            MaximumEventAgeInSeconds: 3600
+            MaximumRetryAttempts: 3
+          RoleArn: !GetAtt SesEventsInvokeRole.Arn
+
+  SesEventsDlqPolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues: [!Ref SesEventsDlq]
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowEventBridgeTargetFailures
+            Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sqs:SendMessage
+            Resource: !GetAtt SesEventsDlq.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !GetAtt SesEventsRule.Arn
+          - Sid: DenyInsecureTransport
+            Effect: Deny
+            Principal: '*'
+            Action: sqs:*
+            Resource: !GetAtt SesEventsDlq.Arn
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'
+
   OrchestratorDlq:
     Type: AWS::SQS::Queue
     DeletionPolicy: Retain
@@ -223,11 +356,33 @@ Resources:
       ComparisonOperator: GreaterThanThreshold
       TreatMissingData: notBreaching
 
+  SesEventsDlqAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Existem eventos SES que não chegaram ao CRM.
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt SesEventsDlq.QueueName
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+
 Outputs:
   FunctionName:
     Value: !Ref SalesReactivationFunction
   DeadLetterQueueUrl:
     Value: !Ref OrchestratorDlq
+  SesEventsDeadLetterQueueUrl:
+    Value: !Ref SesEventsDlq
+  SesEventsApiDestinationArn:
+    Value: !GetAtt SesEventsApiDestination.Arn
+  SesConfigurationSet:
+    Value: !Ref SesConfigurationSet
   EffectiveScheduleState:
     Value: !Ref ScheduleState
   EffectiveRunMode:

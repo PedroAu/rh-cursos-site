@@ -21,10 +21,24 @@ describe("orchestrator configuration", () => {
       supabaseUrl: "http://example.test",
       supabaseServiceRoleKey: "short",
       unsubscribeSecret: "short",
+      sesEventsWebhookSecret: "short",
       publicBaseUrl: "http://example.test",
       telegramBotToken: "short",
       telegramChatId: "private",
     }))).toThrow();
+  });
+
+  it("requires separate secrets for unsubscribe and SES event ingestion", () => {
+    const reusedSecret = "x".repeat(32);
+    expect(() => parseSecret(JSON.stringify({
+      supabaseUrl: "https://project.supabase.co",
+      supabaseServiceRoleKey: "service-role-key-long-enough",
+      unsubscribeSecret: reusedSecret,
+      sesEventsWebhookSecret: reusedSecret,
+      publicBaseUrl: "https://www.rhcursos.com.br",
+      telegramBotToken: "123456789:token-long-enough-value",
+      telegramChatId: "123456789",
+    }))).toThrow("unsubscribeSecret and sesEventsWebhookSecret must be different");
   });
 });
 

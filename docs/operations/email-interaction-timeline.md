@@ -48,17 +48,33 @@ ausente.
 
 ## Amazon SES
 
-1. No configuration set usado pelo envio, habilitar os eventos `Send`,
-   `Delivery`, `Open`, `Click`, `Bounce` e `Complaint` para o EventBridge.
-2. Criar regra do EventBridge limitada ao configuration set e à identidade SES
-   da RH Cursos.
-3. Configurar um API Destination HTTPS apontando para
-   `POST /api/webhooks/ses`, incluindo o header `x-rh-webhook-secret`.
+O template `infrastructure/sales-reactivation-orchestrator/template.yaml` cria o
+Configuration Set, o destino EventBridge, a Connection autenticada, a API
+Destination, a regra, a DLQ retida e o alarme. A regra é limitada ao
+Configuration Set, à identidade SES e ao remetente aprovados. Somente `Send`,
+`Delivery`, `Open`, `Click`, `Bounce` e `Complaint` são publicados porque são os
+seis tipos aceitos pelo receptor.
+
+1. Cadastre o mesmo valor de `sesEventsWebhookSecret` do segredo JSON do
+   orquestrador como `SES_EVENTS_WEBHOOK_SECRET` no Cloudflare.
+2. Implante a stack ainda com `ScheduleState=DISABLED` e `RunMode=DRY_RUN`.
+3. Confirme que a API Destination aponta para
+   `POST https://www.rhcursos.com.br/api/webhooks/ses` e usa o header
+   `x-rh-webhook-secret` sem revelar seu valor.
 4. O envio deve registrar tags SES `lead_id`, `sequence_id`,
    `sequence_step_id` e `rfc_message_id`. Apenas o primeiro evento `Send` pode
    criar o vínculo; os demais eventos exigem `provider_message_id` já conhecido.
 5. Validar primeiro em ambiente de teste. Reentregas são esperadas e convergem
    pela chave de idempotência no banco.
+
+O ambiente AWS inspecionado em 18 de setembro de 2026 possuía um Configuration
+Set legado (`rhub-email-events`) com destino SNS para um endpoint Vercel antigo.
+Ele não substitui a rota versionada acima e não deve ser removido antes do teste
+sintético e da confirmação de que nenhum emissor restante depende dele.
+
+Ao rotacionar o segredo do webhook, atualizar Cloudflare primeiro e depois
+atualizar a stack. CloudFormation não reaplica automaticamente uma referência
+dinâmica quando apenas o valor do Secrets Manager muda.
 
 O receptor aceita o contrato EventBridge `source=aws.ses`, limita o corpo a 64
 KiB, rejeita evento desconhecido e nunca correlaciona por e-mail do destinatário.

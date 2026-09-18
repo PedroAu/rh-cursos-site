@@ -17,14 +17,20 @@ const envSchema = z.object({
   SES_CONFIGURATION_SET: z.string().trim().min(1).max(64).optional(),
 });
 
-const secretSchema = z.object({
-  supabaseUrl: z.string().url().refine((value) => value.startsWith("https://"), "supabaseUrl must use HTTPS"),
-  supabaseServiceRoleKey: z.string().min(20),
-  unsubscribeSecret: z.string().min(32),
-  publicBaseUrl: z.string().url().refine((value) => value.startsWith("https://"), "publicBaseUrl must use HTTPS"),
-  telegramBotToken: z.string().min(20),
-  telegramChatId: z.string().regex(/^-?\d+$/),
-});
+const secretSchema = z
+  .object({
+    supabaseUrl: z.string().url().refine((value) => value.startsWith("https://"), "supabaseUrl must use HTTPS"),
+    supabaseServiceRoleKey: z.string().min(20),
+    unsubscribeSecret: z.string().min(32),
+    sesEventsWebhookSecret: z.string().min(32),
+    publicBaseUrl: z.string().url().refine((value) => value.startsWith("https://"), "publicBaseUrl must use HTTPS"),
+    telegramBotToken: z.string().min(20),
+    telegramChatId: z.string().regex(/^-?\d+$/),
+  })
+  .refine(
+    (value) => value.unsubscribeSecret !== value.sesEventsWebhookSecret,
+    { message: "unsubscribeSecret and sesEventsWebhookSecret must be different" },
+  );
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): OrchestratorConfig {
   const parsed = envSchema.parse(env);

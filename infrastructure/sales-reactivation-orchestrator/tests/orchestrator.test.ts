@@ -93,6 +93,7 @@ const secret: OrchestratorSecret = {
   supabaseUrl: "https://example.supabase.co",
   supabaseServiceRoleKey: "service-role-key-long-enough",
   unsubscribeSecret: "a".repeat(32),
+  sesEventsWebhookSecret: "b".repeat(32),
   publicBaseUrl: "https://www.rhcursos.com.br",
   telegramBotToken: "123456789:token-long-enough-value",
   telegramChatId: "-1001234567890",

@@ -18,6 +18,7 @@ export type OrchestratorSecret = {
   supabaseUrl: string;
   supabaseServiceRoleKey: string;
   unsubscribeSecret: string;
+  sesEventsWebhookSecret: string;
   publicBaseUrl: string;
   telegramBotToken: string;
   telegramChatId: string;

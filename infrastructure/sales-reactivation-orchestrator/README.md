@@ -27,6 +27,7 @@ Crie um segredo JSON no AWS Secrets Manager, sem registrar valores no repositór
   "supabaseUrl": "https://PROJECT.supabase.co",
   "supabaseServiceRoleKey": "valor-secreto",
   "unsubscribeSecret": "minimo-32-caracteres",
+  "sesEventsWebhookSecret": "outro-valor-minimo-32-caracteres",
   "publicBaseUrl": "https://www.rhcursos.com.br",
   "telegramBotToken": "valor-do-BotFather",
   "telegramChatId": "-1000000000000"
@@ -35,7 +36,10 @@ Crie um segredo JSON no AWS Secrets Manager, sem registrar valores no repositór
 
 O `telegramChatId` deve ser o identificador numérico do chat privado autorizado;
 o nome `@rhcursos_bot` não substitui esse ID. Não use token, chave de serviço ou
-e-mail completo em logs.
+e-mail completo em logs. `unsubscribeSecret` e `sesEventsWebhookSecret` devem
+ser diferentes. O segundo valor também deve ser cadastrado no Cloudflare como
+`SES_EVENTS_WEBHOOK_SECRET`; o template o lê do Secrets Manager por referência
+dinâmica e não grava o valor no repositório ou nos parâmetros da stack.
 
 ## Verificação local
 
@@ -47,6 +51,19 @@ sam validate --lint --template-file template.yaml
 
 Os testes usam stores e provedores falsos. Eles não acessam SES, Telegram,
 Supabase remoto ou a base real.
+
+## Permissão do implantador
+
+O arquivo `deployer-policy-extension.json` contém somente as permissões novas
+necessárias para o papel existente `rhcursos-email-deployer` criar o
+Configuration Set e a Connection da API Destination. Ele restringe SES ao nome
+`rh-cursos-transactional`, restringe o service-linked role ao serviço oficial
+`apidestinations.events.amazonaws.com` e restringe os segredos auxiliares ao
+prefixo `events!connection/` criado pelo próprio EventBridge.
+
+Aplicar essa extensão altera permissões da conta e exige autorização explícita.
+Não anexar `AmazonEventBridgeFullAccess`: o papel já possui as ações EventBridge
+necessárias e a extensão documenta apenas as dependências que faltam.
 
 ## CLI
 
@@ -85,6 +102,17 @@ sam deploy --guided --parameter-overrides \
   ScheduleState=DISABLED \
   RunMode=DRY_RUN
 ```
+
+O deploy cria o Configuration Set, publica os seis eventos aceitos pelo receptor
+(`Send`, `Delivery`, `Open`, `Click`, `Bounce` e `Complaint`) no EventBridge e os
+encaminha ao endpoint Cloudflare usando uma API Destination autenticada. A regra
+é limitada à identidade, ao remetente e ao Configuration Set aprovados, possui
+retry, DLQ retida e alarme. O destino de eventos não envia campanhas; o schedule
+do orquestrador continua `DISABLED` e o runtime continua `DRY_RUN`.
+
+Ao rotacionar `sesEventsWebhookSecret`, atualize primeiro o secret do Cloudflare
+e depois faça uma atualização da stack para a Connection reler a referência
+dinâmica. Rotacionar somente o valor no Secrets Manager não atualiza a Connection.
 
 Checklist obrigatório antes do primeiro envio:
 

@@ -18,16 +18,29 @@ marcado quando houver evidência observável do ambiente correspondente.
 
 ## Estado externo ainda pendente
 
-- [ ] Mac desbloqueado e sessão AWS renovada.
+- [x] Mac desbloqueado e sessão AWS renovada; perfil assumido
+  `rhcursos-email-deployer` validado sem expor credenciais.
 - [ ] Sessão Supabase CLI renovada para o projeto `hwpsrujkxjhmmwphqdlz`.
 - [ ] Commits locais enviados à PR #30; o branch remoto ainda está em `bfcfb9e`.
 - [ ] CI remoto executado sobre os commits atuais; o E2E vermelho ainda pertence ao código remoto antigo.
 - [ ] PR atualizada com a branch base e revisada antes do merge.
 - [ ] Migration `20260918130000_contact_import_pipeline.sql` aplicada em produção.
 - [ ] Secrets Cloudflare `EMAIL_UNSUBSCRIBE_SECRET` e `SES_EVENTS_WEBHOOK_SECRET` configurados.
-- [ ] Identidade SES `pedro@rhcursos.com.br` e DKIM/SPF/DMARC verificados.
-- [ ] Conta SES fora do sandbox ou destinatários sintéticos verificados para o teste.
-- [ ] Configuration Set e destino de eventos SES confirmados.
+- [x] Identidade de domínio SES `rhcursos.com.br`, DKIM, custom MAIL FROM, SPF e
+  DMARC verificados. A identidade de domínio autoriza o remetente corporativo.
+- [ ] Conta SES fora do sandbox. A reconsideração do acesso à produção foi
+  enviada à AWS em 18/09/2026 e aguarda resposta; o limite atual permanece 200/dia
+  e 1/segundo.
+- [x] Estado atual do Configuration Set inspecionado: `rhub-email-events` publica
+  via SNS para um endpoint Vercel legado.
+- [x] Novo caminho SES → EventBridge → API Destination → Cloudflare versionado
+  no template, com autenticação, filtro por identidade/remetente/configuração,
+  retry, DLQ e alarme; implantação continua pendente.
+- [ ] Extensão mínima de permissão do papel `rhcursos-email-deployer` aplicada.
+  A inspeção confirmou que o service-linked role da API Destination ainda não
+  existe; a política revisável está em
+  `infrastructure/sales-reactivation-orchestrator/deployer-policy-extension.json`
+  e não foi aplicada sem autorização específica.
 - [ ] ID numérico do chat privado do Telegram confirmado; `@rhcursos_bot` não substitui o chat ID.
 - [ ] Stack AWS implantada com schedule `DISABLED`, `RunMode=DRY_RUN` e allowlist de chat segura.
 - [ ] Dry-run produtivo da importação das três bases externas concluído e revisado.
