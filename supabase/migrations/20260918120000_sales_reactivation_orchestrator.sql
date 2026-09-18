@@ -1183,6 +1183,8 @@ revoke all on table public.lead_contact_permission_event, public.sales_reactivat
   public.sales_orchestrator_control, public.sales_orchestrator_control_event,
   public.sales_reactivation_decision, public.sales_send_attempt, public.sales_notification_outbox
   from public, anon, authenticated;
+revoke all on table public.sales_orchestrator_control, public.sales_orchestrator_control_event
+  from service_role;
 grant select on table public.lead_contact_permission_event, public.sales_reactivation_campaign,
   public.sales_reactivation_campaign_step, public.sales_reactivation_campaign_course,
   public.sales_orchestrator_control, public.sales_orchestrator_control_event,
