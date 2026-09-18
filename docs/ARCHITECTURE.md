@@ -702,6 +702,10 @@ platform boundaries:
 - Cloudflare/Next.js exposes only the protected administrative status read model.
 - Supabase remains the system of record for contact permission, policy decisions,
   campaign versions, sequence claims, send attempts, suppression and notification outbox.
+- External contact bases enter through a service-role-only import gate. Dry-run
+  persists only hashed audit decisions; apply is idempotent, preserves existing
+  PII, stores the `GESTAO_DE_PESSOAS` segment separately, records imported legal
+  basis as `UNKNOWN`, and incorporates dated source history into inactivity checks.
 - An EventBridge-scheduled Lambda performs bounded orchestration and calls Amazon
   SES and the allowlisted private Telegram chat.
 - Locaweb remains the corporate reply inbox; the existing IMAP collector feeds

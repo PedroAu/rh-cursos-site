@@ -186,6 +186,7 @@ quality_gate_tools:
 | 2026-09-18 | 0.7 | Endurecida a corrida claim→SES: a sequência agora preserva o curso aprovado em snapshot imutável e o banco revalida destinatário e curso atuais antes de autorizar o envio. | Dex (@dev) |
 | 2026-09-18 | 0.8 | Projeção operacional ampliada por campanha/versão e janela de 30 dias, com reason codes, eventos por etapa, interrupções, falhas, ausência explícita de classificação positiva e faixa conservadora do custo-base SES. | Atlas (@analyst) |
 | 2026-09-18 | 0.9 | Adicionado planejador local e somente leitura para comparar a exportação do CRM com as quatro bases, deduplicar por e-mail, detectar histórico/supressões/conflitos e manter todos os contatos bloqueados até o gate produtivo. | Dex (@dev) |
+| 2026-09-18 | 1.0 | Implementado pipeline de importação auditável com dry-run, RPCs service-role, preservação de PII, classificação separada, histórico importado e dupla confirmação para APPLY; nenhuma execução remota realizada. | Dex (@dev) |
 
 ## Dev Agent Record
 
@@ -216,6 +217,8 @@ Codex / GPT-5
 - O status administrativo passou a incluir métricas agregadas sem PII por campanha/versão/período; respostas positivas permanecem nulas até classificação explícita, e custo SES é exibido como faixa com premissas documentadas.
 - As bases CSV ganharam um planejador agregado e fail-closed: e-mail exato é a única chave automática de deduplicação; telefone e divergências cadastrais são apenas sinais de revisão, e nenhum contato é autorizado para envio pelo relatório local.
 - Execução sobre as quatro bases: 6.913 linhas viraram 5.668 registros canônicos; 2.923 já constam na exportação do CRM e 2.745 são novos. Entre os novos, 505 não têm base legal registrada, 47 trazem supressão e 2.193 permanecem bloqueados até a consulta ao histórico produtivo.
+- O gate de banco agora compara por e-mail normalizado sob lock transacional, bloqueia duplicidade ambígua, mantém auditoria sem PII, não sobrescreve cadastro existente e nunca converte base legal da planilha em permissão aprovada. O executor exige confirmação textual adicional no modo APPLY.
+- Preparação das três bases externas para o RPC: 3.990 linhas, 2.790 e-mails canônicos e 2.731 candidatos seguros; 59 conflitos de nome ficaram fora do payload, 731 organizações divergentes foram omitidas, 2.096 registros trazem histórico e 46 trazem evento terminal de bounce. A comparação produtiva ainda não foi executada.
 - Ativação ainda depende de dry-run na base real, revisão de elegibilidade, ID numérico do chat privado, identidade SES, testes sintéticos e nova autorização explícita.
 
 ### File List
@@ -241,9 +244,12 @@ Codex / GPT-5
 - `scripts/check-workers-required-secrets.d.mts`
 - `scripts/contact-import-plan.mjs`
 - `scripts/contact-import-plan.d.mts`
+- `scripts/import-contacts.mjs`
+- `scripts/import-contacts.d.mts`
 - `src/__tests__/app/api/admin-sales-reactivation-status-route.test.ts`
 - `src/__tests__/features/admin-blog.test.tsx`
 - `src/__tests__/features/contact-import-plan.test.ts`
+- `src/__tests__/features/contact-import-execution.test.ts`
 - `src/__tests__/features/sales-reactivation-core.test.ts`
 - `src/__tests__/features/sales-reactivation-status.test.ts`
 - `src/__tests__/ci/production-workflow.test.ts`
@@ -253,7 +259,9 @@ Codex / GPT-5
 - `src/lib/email/unsubscribe-token-core.ts`
 - `src/lib/email/unsubscribe-token.ts`
 - `supabase/migrations/20260918120000_sales_reactivation_orchestrator.sql`
+- `supabase/migrations/20260918130000_contact_import_pipeline.sql`
 - `supabase/tests/database/sales-reactivation-orchestrator.test.sql`
+- `supabase/tests/database/contact-import-pipeline.test.sql`
 - `tests/admin-crud.spec.ts`
 
 ## QA Results

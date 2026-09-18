@@ -1,4 +1,16 @@
 export type ContactImportSource = { name: string; text: string };
+export type ContactImportCandidate = {
+  sourceKey: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  organization: string | null;
+  hasSourceHistory: boolean;
+  sourceLastActivityAt: string | null;
+  sourceEventType: "SENT" | "BOUNCED" | "COMPLAINED" | "UNSUBSCRIBED" | null;
+  sourceEventAt: string | null;
+  legalBasis: "CONSENT" | "LEGITIMATE_INTEREST" | "CONTRACT" | "OTHER" | null;
+};
 
 export type ContactImportPlan = {
   mode: "READ_ONLY_IMPORT_PLAN";
@@ -43,4 +55,18 @@ export function buildContactImportPlan(options: {
   referenceDate?: string | Date | null;
   inactiveDays?: number;
 }): ContactImportPlan;
+export function buildContactImportCandidates(options: { sources: ContactImportSource[] }): {
+  candidates: ContactImportCandidate[];
+  fileSetDigest: string;
+  sourceRows: number;
+  stats: {
+    canonical_records: number;
+    candidates_ready: number;
+    blocked_name_conflicts: number;
+    blocked_invalid_provider_addresses: number;
+    organization_conflicts_omitted: number;
+    phone_conflicts_omitted: number;
+    invalid_email_rows: number;
+  };
+};
 export function main(argv?: string[]): void;

@@ -98,6 +98,31 @@ o e-mail ainda precisa ser confrontado com o CRM/event store produtivo e passar
 pela policy fail-closed. Conflitos de nome, telefone ou organização devem ser
 revisados; o importador não sobrescreve silenciosamente o cadastro oficial.
 
+Depois que a migration do pipeline estiver aplicada, a comparação com o CRM
+produtivo usa RPCs `service_role` e começa obrigatoriamente em `DRY_RUN`. Esse
+modo grava somente hashes, ações e reason codes para auditoria; não cria nem
+altera leads, permissões ou sequências. A execução é uma ação externa e requer
+autorização explícita, mesmo em dry-run:
+
+```bash
+npm run sales:contacts:import -- \
+  --mode dry-run \
+  --source-label bases-comerciais-2026-09 \
+  /caminho/base-hubspot-gestao-pessoas.csv \
+  /caminho/base-hubspot-departamento-pessoal.csv \
+  /caminho/leads.csv
+```
+
+O modo `APPLY` exige simultaneamente `--approval-reference` com referência
+auditável e `--confirm-apply APPLY_CONTACTS_TO_CRM`. Ele cria somente contatos
+inexistentes, preserva PII de contatos já presentes, classifica o segmento em
+tabela própria e registra a base legal importada como `UNKNOWN`; nunca como
+`APPROVED`. Eventos históricos de e-mail com tipo e data conhecidos entram na
+timeline. Evidência sem data bloqueia a elegibilidade indefinidamente. Conflito
+de nome e endereço marcado como inválido pelo provedor são bloqueados localmente;
+conflitos de organização ou telefone são omitidos em vez de sobrescrever dados.
+Nenhum modo cria sequência de reativação ou envia mensagem.
+
 ## Primeiro lote
 
 1. Gerar o plano agregado das bases e revisar duplicidades, conflitos, histórico e base legal.
@@ -128,6 +153,7 @@ revisados; o importador não sobrescreve silenciosamente o cadastro oficial.
 
 - `npm run verify:sales-reactivation`
 - `npm run sales:contacts:plan -- --crm-file <export.csv> <bases.csv...>`
+- `npm run sales:contacts:import -- --mode dry-run <bases.csv...>` (somente após autorização)
 - `npm run test:db`
 - `npm run docs:api:lint && npm run docs:api:check-drift`
 - `cfn-lint infrastructure/sales-reactivation-orchestrator/template.yaml`

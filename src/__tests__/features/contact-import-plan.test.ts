@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildContactImportCandidates,
   buildContactImportPlan,
   normalizeEmail,
   normalizePhone,
@@ -90,5 +91,48 @@ describe("contact import plan", () => {
         crmSourceName: "unknown.csv",
       }),
     ).toThrow("Schema CSV não reconhecido");
+  });
+
+  it("builds deterministic private RPC candidates and blocks conflicting names", () => {
+    const result = buildContactImportCandidates({
+      sources: [
+        { name: "segment.csv", text: segmentCsv },
+        { name: "leads.csv", text: leadsCsv },
+      ],
+    });
+    const reversed = buildContactImportCandidates({
+      sources: [
+        { name: "leads.csv", text: leadsCsv },
+        { name: "segment.csv", text: segmentCsv },
+      ],
+    });
+
+    expect(result.fileSetDigest).toBe(reversed.fileSetDigest);
+    expect(result.stats).toMatchObject({
+      canonical_records: 3,
+      candidates_ready: 2,
+      blocked_name_conflicts: 1,
+      invalid_email_rows: 0,
+    });
+    expect(result.candidates.map((candidate) => candidate.email).sort()).toEqual([
+      "bia@example.com",
+      "caio@example.com",
+    ]);
+    expect(result.candidates.find((candidate) => candidate.email === "caio@example.com")).toMatchObject({
+      sourceEventType: "BOUNCED",
+      sourceEventAt: "2026-07-01T12:00:00.000Z",
+      legalBasis: "LEGITIMATE_INTEREST",
+    });
+  });
+
+  it("blocks provider-invalid addresses before any RPC payload is built", () => {
+    const invalidCsv = `nome,email,lgpd_base,brevo_message_id,brevo_invalid
+Dana Exemplo,dana@example.com,legitimo_interesse,,1
+`;
+    const result = buildContactImportCandidates({
+      sources: [{ name: "invalid.csv", text: invalidCsv }],
+    });
+    expect(result.candidates).toHaveLength(0);
+    expect(result.stats.blocked_invalid_provider_addresses).toBe(1);
   });
 });

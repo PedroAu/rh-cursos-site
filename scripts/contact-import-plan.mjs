@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { readFileSync, statSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { basename, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -180,6 +181,13 @@ function sourceRecord(row, headers, schema) {
   if (toCount(firstValue(row, headers, ["brevo_complaints"])) > 0) suppressions.add("COMPLAINT");
   if (toCount(firstValue(row, headers, ["brevo_invalid"])) > 0) suppressions.add("INVALID");
 
+  let sourceEventType = null;
+  if (toCount(firstValue(row, headers, ["brevo_unsubscribed"])) > 0) sourceEventType = "UNSUBSCRIBED";
+  else if (toCount(firstValue(row, headers, ["brevo_complaints"])) > 0) sourceEventType = "COMPLAINED";
+  else if (emailStatus === "bounce" || eventStatus.includes("bounce")) sourceEventType = "BOUNCED";
+  else if (stage === "descadastrado") sourceEventType = "UNSUBSCRIBED";
+  else if (emailStatus === "enviado" || hasProviderMessage) sourceEventType = "SENT";
+
   return {
     schema,
     email,
@@ -193,6 +201,7 @@ function sourceRecord(row, headers, schema) {
     hasPriorInteraction,
     lastActivityRaw,
     lastActivityAt,
+    sourceEventType,
     suppressions,
   };
 }
@@ -230,6 +239,133 @@ function countEvidence(target, entity, isRecent) {
   if (entity.historyDateUnknown) target.source_history_date_unknown += 1;
   if (isRecent) target.recent_source_interaction += 1;
   if (entity.suppressions.size > 0) target.source_suppression += 1;
+}
+
+function sha256(value) {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function schemaPriority(schema) {
+  if (schema === "enriched-leads") return 0;
+  if (schema === "site-crm-export") return 1;
+  return 2;
+}
+
+function mapLegalBasis(value) {
+  const normalized = normalizeLabel(value);
+  if (!normalized) return null;
+  if (normalized === "legitimointeresse" || normalized === "legitimateinterest") return "LEGITIMATE_INTEREST";
+  if (normalized === "consentimento" || normalized === "consent") return "CONSENT";
+  if (normalized === "contrato" || normalized === "contract") return "CONTRACT";
+  return "OTHER";
+}
+
+/**
+ * Builds the private in-memory payload used by the controlled Supabase RPC.
+ * Callers must never log or persist the returned candidates outside the CRM.
+ */
+export function buildContactImportCandidates({ sources }) {
+  if (!Array.isArray(sources) || sources.length === 0) throw new Error("Informe ao menos um CSV.");
+  const canonical = new Map();
+  let sourceRows = 0;
+  let invalidEmailRows = 0;
+
+  for (const source of sources) {
+    const parsed = parseCsv(source.text);
+    const schema = detectSchema(parsed.headers);
+    sourceRows += parsed.rows.length;
+    for (const row of parsed.rows) {
+      const record = sourceRecord(row, parsed.headers, schema);
+      if (!record.email) {
+        invalidEmailRows += 1;
+        continue;
+      }
+      const records = canonical.get(record.email) ?? [];
+      records.push({ ...record, sourceName: source.name });
+      canonical.set(record.email, records);
+    }
+  }
+
+  const candidates = [];
+  let blockedNameConflicts = 0;
+  let blockedInvalidProviderAddresses = 0;
+  let organizationConflicts = 0;
+  let phoneConflicts = 0;
+
+  for (const [email, records] of canonical) {
+    const ordered = [...records].sort((left, right) => {
+      const priority = schemaPriority(left.schema) - schemaPriority(right.schema);
+      return priority || left.sourceName.localeCompare(right.sourceName);
+    });
+    const names = new Set(records.map((record) => normalizedComparable(record.name)).filter(Boolean));
+    const organizations = new Set(
+      records.map((record) => normalizedComparable(record.organization)).filter(Boolean),
+    );
+    const phones = new Set(records.map((record) => record.phone).filter(Boolean));
+    if (records.some((record) => record.suppressions.has("INVALID"))) {
+      blockedInvalidProviderAddresses += 1;
+      continue;
+    }
+    if (names.size > 1) {
+      blockedNameConflicts += 1;
+      continue;
+    }
+    if (organizations.size > 1) organizationConflicts += 1;
+    if (phones.size > 1) phoneConflicts += 1;
+
+    const name = ordered.find((record) => record.name)?.name ?? "";
+    if (!name) {
+      blockedNameConflicts += 1;
+      continue;
+    }
+    const phone = phones.size === 1 ? ordered.find((record) => record.phone)?.phone ?? null : null;
+    const organization =
+      organizations.size === 1
+        ? ordered.find((record) => record.organization)?.organization ?? null
+        : null;
+    const lastActivities = records
+      .map((record) => record.lastActivityAt)
+      .filter((value) => value instanceof Date && !Number.isNaN(value.getTime()));
+    const latestActivity = lastActivities.length
+      ? new Date(Math.max(...lastActivities.map((value) => value.getTime())))
+      : null;
+    const eventRecord = ordered.find((record) => record.sourceEventType);
+    const legalBasis = ordered.map((record) => mapLegalBasis(record.legalBasis)).find(Boolean) ?? null;
+
+    candidates.push({
+      sourceKey: sha256(`contact-import-v1:${email}`),
+      name,
+      email,
+      phone,
+      organization,
+      hasSourceHistory: records.some((record) => record.hasPriorInteraction),
+      sourceLastActivityAt: latestActivity?.toISOString() ?? null,
+      sourceEventType: eventRecord?.sourceEventType ?? null,
+      sourceEventAt: eventRecord?.lastActivityAt?.toISOString() ?? null,
+      legalBasis,
+    });
+  }
+
+  const fileSetDigest = sha256(
+    `contact-import-v1\n${sources
+      .map((source) => `${source.name}:${sha256(source.text)}`)
+      .sort()
+      .join("\n")}`,
+  );
+  return {
+    candidates,
+    fileSetDigest,
+    sourceRows,
+    stats: {
+      canonical_records: canonical.size,
+      candidates_ready: candidates.length,
+      blocked_name_conflicts: blockedNameConflicts,
+      blocked_invalid_provider_addresses: blockedInvalidProviderAddresses,
+      organization_conflicts_omitted: organizationConflicts,
+      phone_conflicts_omitted: phoneConflicts,
+      invalid_email_rows: invalidEmailRows,
+    },
+  };
 }
 
 export function buildContactImportPlan({ sources, crmSourceName, referenceDate, inactiveDays = DEFAULT_INACTIVE_DAYS }) {
