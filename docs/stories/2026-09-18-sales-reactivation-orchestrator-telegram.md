@@ -104,10 +104,10 @@ quality_gate_tools:
   - [x] Adicionar Vitest para policy, templates, SES, Telegram, retries, métricas e PII.
   - [x] Adicionar integração e E2E somente em dry-run/provedores falsos até autorização de ativação.
   - [x] Executar todos os gates e registrar evidências.
-- [ ] Preparar handoff e ativação controlada (AC: 11, 12)
+- [x] Preparar handoff e ativação controlada (AC: 11, 12)
   - [x] Atualizar `.env.example`, OpenAPI, arquitetura e runbook sem valores de segredo.
   - [x] Documentar ordem de deploy, smoke tests, rollback e checklist do primeiro lote.
-  - [ ] Entregar ao `@devops` commit candidato; push/deploy/ativação permanecem sujeitos a autorização.
+  - [x] Entregar ao `@devops` commit candidato; push/deploy/ativação permanecem sujeitos a autorização.
 
 ## Dev Notes
 
@@ -180,6 +180,7 @@ quality_gate_tools:
 | 2026-09-18 | 0.1 | História criada para orquestrador de reativação 0/5/10, SES, policy gate, kill switches, Telegram privado, métricas e ativação controlada. | River (@sm) |
 | 2026-09-18 | 0.2 | PO tornou explícitos os três cursos e o endereço corporativo; história aprovada para implementação em dry-run, com ativação produtiva ainda condicionada. | Pax (@po) |
 | 2026-09-18 | 0.3 | Implementação local concluída e movida para revisão; descoberta de coorte exige comando manual explícito e produção permanece desativada. | Dex (@dev) |
+| 2026-09-18 | 0.4 | Commit candidato `ca426b0` preparado para handoff; push, deploy e ativação não executados. | Gage (@devops) |
 
 ## Dev Agent Record
 
@@ -200,6 +201,7 @@ Codex / GPT-5
 - Worker AWS/SES e Telegram implementado com privilégio mínimo, concorrência 1, DLQ, alarmes e defaults desativados/dry-run.
 - API administrativa de status, projeções descritivas, OpenAPI, arquitetura e runbook concluídos.
 - Nenhuma chamada real a SES/Telegram, migration remota, deploy, ativação, push ou merge foi executada nesta story.
+- Commit candidato de implementação: `ca426b0` (`feat(sales): add safe reactivation orchestrator`).
 - Ativação ainda depende de dry-run na base real, revisão de elegibilidade, ID numérico do chat privado, identidade SES, testes sintéticos e nova autorização explícita.
 
 ### File List
