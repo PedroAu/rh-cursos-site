@@ -1,5 +1,14 @@
 # Linha do tempo de interações de e-mail — runbook
 
+## Estado operacional em 17 de setembro de 2026
+
+- Migration `20260916120000_lead_email_interaction_timeline.sql` aplicada em produção.
+- Aplicação publicada no Cloudflare Worker, versão `0febab27-5a35-4dbe-8200-669139abc144`.
+- Stack AWS `rhcursos-email-imap` em `UPDATE_COMPLETE`, com schedule habilitado a cada minuto.
+- Bootstrap IMAP de 15 dias concluído: 6 mensagens examinadas, nenhuma correlacionada e nenhuma inválida; checkpoint incremental avançado para UID 15782.
+- Execução incremental seguinte não encontrou novas mensagens; alarmes em `OK` e DLQ vazia.
+- Nenhuma campanha de reativação ou envio comercial está ativa.
+
 ## Escopo desta entrega
 
 Esta entrega cria, sem ativar disparos, o event store append-only, a interrupção
@@ -64,10 +73,10 @@ normalizado ao endpoint. O bootstrap considera 15 dias e depois converge para
 leitura incremental.
 
 O template SAM nasce com o schedule `DISABLED`, concorrência reservada 1,
-retries, DLQ, retenção de logs e alarmes. Antes da ativação ainda é necessário
-criar o segredo no Secrets Manager, publicar a stack em homologação, executar o
-smoke test manual e confirmar os eventos na timeline. A cadência não deve ser
-ativada antes desses passos.
+retries, DLQ, retenção de logs e alarmes. Na implantação atual, o segredo foi
+configurado, a stack publicada, o bootstrap executado e o schedule habilitado
+somente depois da validação do checkpoint, dos alarmes e da DLQ. Isso habilita
+apenas a coleta de respostas; não ativa a cadência de envio.
 
 ## Descadastro
 

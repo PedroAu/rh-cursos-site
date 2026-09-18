@@ -373,7 +373,13 @@ export async function ingestUnsubscribeEvent(
     .limit(1);
   if (error) throw new Error("Falha ao consultar sequência ativa.");
   const sequenceId = sequenceRows?.[0]?.id ?? null;
-  const eventHash = hash(input);
+  // O token identifica a solicitação. Repetições podem chegar em instantes
+  // diferentes e ainda devem convergir para o mesmo evento idempotente.
+  const eventHash = hash({
+    leadId: input.leadId,
+    tokenId: input.tokenId,
+    eventType: "UNSUBSCRIBED",
+  });
   return persistInteraction(client, {
     leadId: input.leadId,
     messageId: null,

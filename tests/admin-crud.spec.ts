@@ -689,20 +689,19 @@ test.describe("admin CRUD — ciclo completo criar → salvar → excluir", () =
     const title = `${MARKER} post ${Date.now()}`;
     await page.goto("/admin/blog");
 
-    const dialog = await openCreateDialog(page);
-    await fillText(dialog, "Título", title);
-    await fillSelectByIndex(dialog, "Categoria");
-    await fillText(dialog, "Autor", "Equipe E2E");
-    await fillSelectByIndex(dialog, "Status");
-    await fillText(dialog, "Resumo", "Resumo de teste com mais de vinte caracteres.");
-    await fillText(
-      dialog,
-      "Conteúdo",
+    await page.getByRole("button", { name: "Novo post" }).click();
+    await expect(page).toHaveURL(/\/admin\/blog\/novo$/);
+    const editor = page.locator("main");
+    await editor.getByRole("textbox", { name: "Título", exact: true }).fill(title);
+    await fillSelectByIndex(editor, "Categoria");
+    await editor.getByRole("textbox", { name: "Autor", exact: true }).fill("Equipe E2E");
+    await editor.getByRole("textbox", { name: /^Resumo/ }).fill("Resumo de teste com mais de vinte caracteres.");
+    await editor.getByRole("textbox", { name: "Conteúdo", exact: true }).fill(
       "Conteúdo de teste gerado pelo spec admin-crud.spec.ts. Precisa ter pelo menos cem caracteres " +
         "para passar na validação de admin-form-validation.ts, então este parágrafo é propositalmente longo."
     );
 
-    await dialog.getByRole("button", { name: /Criar registro|Salvar alterações/ }).click();
+    await editor.getByRole("button", { name: "Salvar" }).click();
     await expect
       .poll(
         async () => {

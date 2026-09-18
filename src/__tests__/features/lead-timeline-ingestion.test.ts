@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ingestImapEvent, ingestSesEvent, normalizedImapEventSchema } from "@/features/admin/leads/timeline/ingestion";
+import {
+  ingestImapEvent,
+  ingestSesEvent,
+  ingestUnsubscribeEvent,
+  normalizedImapEventSchema,
+} from "@/features/admin/leads/timeline/ingestion";
 
 const messageLink = {
   id: "10000000-0000-0000-0000-000000000001",
@@ -90,5 +95,20 @@ describe("timeline ingestion", () => {
       mailbox: "INBOX",
       body: "conteúdo que não pode entrar no event store",
     })).toThrow();
+  });
+
+  it("mantém a idempotência do descadastro quando o mesmo token é repetido depois", async () => {
+    const { client, rpc } = createClient();
+    const base = {
+      leadId: "lead-1",
+      tokenId: "10000000-0000-4000-8000-000000000001",
+    };
+
+    await ingestUnsubscribeEvent(client, { ...base, occurredAt: "2026-09-16T12:00:00.000Z" });
+    await ingestUnsubscribeEvent(client, { ...base, occurredAt: "2026-09-17T12:00:00.000Z" });
+
+    expect(rpc).toHaveBeenCalledTimes(2);
+    expect(rpc.mock.calls[0][1].p_idempotency_key).toBe(`unsubscribe:${base.tokenId}`);
+    expect(rpc.mock.calls[1][1].p_event_hash).toBe(rpc.mock.calls[0][1].p_event_hash);
   });
 });

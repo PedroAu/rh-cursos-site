@@ -37,7 +37,8 @@ afterEach(() => vi.useRealTimers());
 describe("Gestão do blog em páginas separadas", () => {
   it("mostra apenas o acervo com links próprios de criação e edição", () => {
     render(<AdminBlogPage />);
-    expect(screen.getByRole("link", { name: "Novo artigo" })).toHaveAttribute("href", "/admin/blog/novo");
+    fireEvent.click(screen.getByRole("button", { name: "Novo post" }));
+    expect(mocks.push).toHaveBeenCalledWith("/admin/blog/novo");
     expect(screen.getByRole("link", { name: `Editar ${post.title}` })).toHaveAttribute("href", "/admin/blog/post-1/editar");
     expect(screen.queryByLabelText("Conteúdo")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Salvar" })).not.toBeInTheDocument();
