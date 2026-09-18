@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildReactivationScorecard } from "@/features/sales/reactivation/metrics";
+import { buildReactivationScorecard, estimateSesBaseCost } from "@/features/sales/reactivation/metrics";
 import { evaluateReactivationEligibility } from "@/features/sales/reactivation/policy";
 import { formatTelegramAlert } from "@/features/sales/reactivation/telegram";
 import { renderReactivationTemplate } from "@/features/sales/reactivation/templates";
@@ -105,6 +105,7 @@ describe("sales reactivation core", () => {
       ],
       interactions: [{ eventType: "SENT" }, { eventType: "DELIVERED" }, { eventType: "REPLIED" }],
       toolFailures: 1,
+      interruptedSequences: 2,
     })).toMatchObject({
       eligible: 1,
       rejected: 1,
@@ -112,7 +113,20 @@ describe("sales reactivation core", () => {
       sent: 1,
       delivered: 1,
       replied: 1,
+      interruptedSequences: 2,
+      positiveReplies: null,
       toolFailures: 1,
     });
+  });
+
+  it("estima custo SES como faixa explícita quando o plano da conta é desconhecido", () => {
+    expect(estimateSesBaseCost(1_000)).toMatchObject({
+      status: "RANGE_WITHOUT_ACCOUNT_PLAN",
+      sent: 1_000,
+      currency: "USD",
+      lowUsd: 0.1,
+      highUsd: 0.23,
+    });
+    expect(estimateSesBaseCost(Number.NaN).sent).toBe(0);
   });
 });

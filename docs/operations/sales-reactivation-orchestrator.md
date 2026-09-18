@@ -58,9 +58,19 @@ inclusão controlada da coorte revisada; sem essa opção, nenhum contato novo e
 - `bounced`, `complained`, `unsubscribed`: sinais de risco e supressão.
 - `interruptedSequences`: sequências paradas por evento terminal.
 - `toolFailures`: falhas técnicas; não representam rejeição do contato.
+- `sentByStep`: envios observados nos passos 0, 1 e 2 da versão consultada.
+- `positiveReplies`: permanece `null` enquanto não houver classificação humana
+  explícita; o sistema não infere intenção positiva a partir de uma resposta.
+- `costEstimate`: faixa do custo-base SES em USD, calculada pelo volume enviado e
+  pelos extremos públicos de US$ 0,10–0,23 por mil mensagens verificados em
+  18/09/2026. Não inclui dados, anexos, VDM, IP dedicado, Global Endpoints nem
+  impostos; antes da ativação, confirmar o plano real da conta em
+  <https://aws.amazon.com/ses/pricing/>.
 
 Essas métricas são descritivas. Abertura pode ser afetada por proteção de
-privacidade, e nenhuma diferença deve ser tratada como causal sem experimento.
+privacidade, eventos podem ocorrer mais de uma vez, e nenhuma diferença deve ser
+tratada como causal sem experimento. A projeção administrativa usa uma janela
+móvel de 30 dias e preserva campanha, versão, policy, template e período.
 
 ## Primeiro lote
 

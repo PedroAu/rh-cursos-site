@@ -1,7 +1,7 @@
 -- Story 2026-09-18 — guardrails do orquestrador de reativação.
 begin;
 
-select plan(37);
+select plan(41);
 
 select ok(not (select enabled from public.sales_orchestrator_control where id = 'global'), 'automação nasce desabilitada');
 select ok((select dry_run from public.sales_orchestrator_control where id = 'global'), 'dry-run nasce ativo');
@@ -22,6 +22,14 @@ select ok(not has_table_privilege('authenticated', 'public.sales_reactivation_de
 select ok(
   has_function_privilege('service_role', 'public.sales_list_reactivation_candidates(uuid,integer,integer)', 'EXECUTE'),
   'somente processo confiável lista candidatos'
+);
+select ok(
+  has_function_privilege('service_role', 'public.sales_reactivation_metrics(varchar,timestamptz,timestamptz)', 'EXECUTE'),
+  'service role consulta métricas agregadas'
+);
+select ok(
+  not has_function_privilege('anon', 'public.sales_reactivation_metrics(varchar,timestamptz,timestamptz)', 'EXECUTE'),
+  'anon não consulta métricas comerciais'
 );
 select ok(
   not has_table_privilege('service_role', 'public.sales_orchestrator_control', 'UPDATE'),
@@ -123,6 +131,17 @@ select is(
   (select campaign_course_title from public.lead_email_sequence where id = (select id from created_sequence)),
   'Auditoria da Folha de Pagamento',
   'sequência preserva o curso aprovado como snapshot auditável'
+);
+select ok(
+  (public.sales_reactivation_metrics('reactivation-v1', now() - interval '1 day', now() + interval '1 day') #>> '{campaign,key}') = 'reactivation-v1'
+  and (public.sales_reactivation_metrics('reactivation-v1', now() - interval '1 day', now() + interval '1 day') #>> '{decisions,eligible}')::integer = 1,
+  'métricas preservam campanha, versão temporal e decisões da coorte'
+);
+select throws_ok(
+  $$select public.sales_reactivation_metrics('reactivation-v1', now(), now() - interval '1 day')$$,
+  'P0001',
+  'Período de métricas inválido.',
+  'métricas rejeitam período inválido'
 );
 
 create temporary table claimed_step as

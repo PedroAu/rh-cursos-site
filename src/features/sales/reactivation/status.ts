@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { estimateSesBaseCost } from "@/features/sales/reactivation/metrics";
+
 type QueryResult<T> = { data: T | null; count?: number | null; error: { message: string } | null };
 
 function assertResult<T>(result: QueryResult<T>, operation: string): T {
@@ -8,8 +10,14 @@ function assertResult<T>(result: QueryResult<T>, operation: string): T {
   return result.data;
 }
 
-export async function getReactivationStatus(client: SupabaseClient, campaignKey = "reactivation-v1") {
-  const [controlResult, campaignResult, pendingResult, sentResult, interruptedResult, failedResult, notificationResult] =
+export async function getReactivationStatus(
+  client: SupabaseClient,
+  campaignKey = "reactivation-v1",
+  now = new Date(),
+) {
+  const periodTo = now.toISOString();
+  const periodFrom = new Date(now.getTime() - 30 * 86_400_000).toISOString();
+  const [controlResult, campaignResult, pendingResult, sentResult, interruptedResult, failedResult, notificationResult, metricsResult] =
     await Promise.all([
       client.from("sales_orchestrator_control").select("*").eq("id", "global").single(),
       client.from("sales_reactivation_campaign").select("*").eq("campaign_key", campaignKey).order("version", { ascending: false }).limit(1).maybeSingle(),
@@ -21,6 +29,11 @@ export async function getReactivationStatus(client: SupabaseClient, campaignKey 
         .eq("status", "INTERRUPTED").like("campaign_key", `${campaignKey}@%`),
       client.from("sales_send_attempt").select("id", { count: "exact", head: true }).in("status", ["PERMANENT_FAILED", "AMBIGUOUS"]),
       client.from("sales_notification_outbox").select("id", { count: "exact", head: true }).in("status", ["PENDING", "FAILED"]),
+      client.rpc("sales_reactivation_metrics", {
+        p_campaign_key: campaignKey,
+        p_from: periodFrom,
+        p_to: periodTo,
+      }),
     ]);
 
   const control = assertResult(controlResult as QueryResult<Record<string, unknown>>, "controle");
@@ -36,6 +49,12 @@ export async function getReactivationStatus(client: SupabaseClient, campaignKey 
   }
 
   const campaign = campaignResult.data as Record<string, unknown> | null;
+  const aggregateMetrics = assertResult(
+    metricsResult as QueryResult<Record<string, unknown>>,
+    "métricas",
+  );
+  const eventCounts = aggregateMetrics.events as Record<string, unknown> | undefined;
+  const sentInPeriod = Number(eventCounts?.SENT ?? 0);
   return {
     campaign: campaign ? {
       key: campaign.campaign_key,
@@ -64,6 +83,10 @@ export async function getReactivationStatus(client: SupabaseClient, campaignKey 
       interruptedSequences: interruptedResult.count ?? 0,
       failedAttempts: failedResult.count ?? 0,
       pendingNotifications: notificationResult.count ?? 0,
+    },
+    metrics: {
+      ...aggregateMetrics,
+      costEstimate: estimateSesBaseCost(sentInPeriod),
     },
   };
 }

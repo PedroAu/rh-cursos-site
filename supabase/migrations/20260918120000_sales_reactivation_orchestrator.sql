@@ -965,6 +965,133 @@ begin
 end;
 $$;
 
+create or replace function public.sales_reactivation_metrics(
+  p_campaign_key varchar,
+  p_from timestamptz,
+  p_to timestamptz
+)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_campaign public.sales_reactivation_campaign%rowtype;
+  v_sequence_key text;
+  v_decisions jsonb;
+  v_rejected_by_reason jsonb;
+  v_events jsonb;
+  v_sent_by_step jsonb;
+  v_interrupted bigint;
+  v_tool_failures bigint;
+begin
+  if nullif(trim(p_campaign_key), '') is null
+    or p_from is null
+    or p_to is null
+    or p_from >= p_to
+    or p_to - p_from > interval '366 days' then
+    raise exception 'Período de métricas inválido.' using errcode = 'P0001';
+  end if;
+
+  select * into v_campaign
+  from public.sales_reactivation_campaign
+  where campaign_key = p_campaign_key
+  order by version desc
+  limit 1;
+  if v_campaign.id is null then
+    raise exception 'Campanha não encontrada.' using errcode = 'P0002';
+  end if;
+  v_sequence_key := v_campaign.campaign_key || '@' || v_campaign.version::text;
+
+  select jsonb_build_object(
+    'eligible', count(*) filter (where decision = 'ELIGIBLE'),
+    'rejected', count(*) filter (where decision = 'REJECTED')
+  ) into v_decisions
+  from public.sales_reactivation_decision
+  where campaign_id = v_campaign.id
+    and decided_at >= p_from
+    and decided_at < p_to;
+
+  select coalesce(jsonb_object_agg(reason_code, reason_count), '{}'::jsonb)
+  into v_rejected_by_reason
+  from (
+    select reason_code, count(*) as reason_count
+    from public.sales_reactivation_decision decision_event,
+      unnest(decision_event.reason_codes) reason_code
+    where decision_event.campaign_id = v_campaign.id
+      and decision_event.decision = 'REJECTED'
+      and decision_event.decided_at >= p_from
+      and decision_event.decided_at < p_to
+    group by reason_code
+    order by reason_code
+  ) reason_counts;
+
+  select coalesce(jsonb_object_agg(event_type, event_count), '{}'::jsonb)
+  into v_events
+  from (
+    select interaction.event_type, count(*) as event_count
+    from public.lead_interaction interaction
+    join public.lead_email_sequence sequence on sequence.id = interaction.sequence_id
+    where sequence.campaign_key = v_sequence_key
+      and interaction.occurred_at >= p_from
+      and interaction.occurred_at < p_to
+    group by interaction.event_type
+    order by interaction.event_type
+  ) event_counts;
+
+  select coalesce(jsonb_object_agg(step_index::text, sent_count), '{}'::jsonb)
+  into v_sent_by_step
+  from (
+    select step.step_index, count(*) as sent_count
+    from public.lead_interaction interaction
+    join public.lead_email_message message on message.id = interaction.message_id
+    join public.lead_email_sequence_step step on step.id = message.sequence_step_id
+    join public.lead_email_sequence sequence on sequence.id = step.sequence_id
+    where sequence.campaign_key = v_sequence_key
+      and interaction.event_type = 'SENT'
+      and interaction.occurred_at >= p_from
+      and interaction.occurred_at < p_to
+    group by step.step_index
+    order by step.step_index
+  ) step_counts;
+
+  select count(*) into v_interrupted
+  from public.lead_email_sequence
+  where campaign_key = v_sequence_key
+    and status = 'INTERRUPTED'
+    and interrupted_at >= p_from
+    and interrupted_at < p_to;
+
+  select count(*) into v_tool_failures
+  from public.sales_send_attempt attempt
+  join public.lead_email_sequence_step step on step.id = attempt.sequence_step_id
+  join public.lead_email_sequence sequence on sequence.id = step.sequence_id
+  where sequence.campaign_key = v_sequence_key
+    and attempt.status in ('RETRYABLE_FAILED', 'PERMANENT_FAILED', 'AMBIGUOUS')
+    and attempt.started_at >= p_from
+    and attempt.started_at < p_to;
+
+  return jsonb_build_object(
+    'campaign', jsonb_build_object(
+      'key', v_campaign.campaign_key,
+      'version', v_campaign.version,
+      'policyVersion', v_campaign.policy_version,
+      'templateVersion', v_campaign.template_version
+    ),
+    'period', jsonb_build_object('from', p_from, 'to', p_to, 'timezone', v_campaign.timezone),
+    'decisions', v_decisions,
+    'rejectedByReason', v_rejected_by_reason,
+    'events', v_events,
+    'sentByStep', v_sent_by_step,
+    'positiveReplies', null,
+    'positiveReplyClassificationCoverage', 0,
+    'interruptedSequences', v_interrupted,
+    'toolFailures', v_tool_failures
+  );
+end;
+$$;
+
 create or replace function public.reject_sales_audit_mutation()
 returns trigger
 language plpgsql
@@ -1096,6 +1223,7 @@ revoke all on function public.sales_claim_notifications(uuid, timestamptz, integ
 revoke all on function public.sales_complete_notification(uuid, uuid) from public, anon, authenticated;
 revoke all on function public.sales_mark_notification_failure(uuid, uuid, varchar, boolean) from public, anon, authenticated;
 revoke all on function public.sales_set_orchestrator_state(varchar, varchar, varchar, varchar) from public, anon, authenticated;
+revoke all on function public.sales_reactivation_metrics(varchar, timestamptz, timestamptz) from public, anon, authenticated;
 grant execute on function public.sales_create_reactivation_sequence(varchar, uuid, uuid, varchar, varchar) to service_role;
 grant execute on function public.sales_list_reactivation_candidates(uuid, integer, integer) to service_role;
 grant execute on function public.sales_claim_reactivation_steps(uuid, timestamptz, integer, integer) to service_role;
@@ -1106,6 +1234,7 @@ grant execute on function public.sales_claim_notifications(uuid, timestamptz, in
 grant execute on function public.sales_complete_notification(uuid, uuid) to service_role;
 grant execute on function public.sales_mark_notification_failure(uuid, uuid, varchar, boolean) to service_role;
 grant execute on function public.sales_set_orchestrator_state(varchar, varchar, varchar, varchar) to service_role;
+grant execute on function public.sales_reactivation_metrics(varchar, timestamptz, timestamptz) to service_role;
 
 with campaign as (
   insert into public.sales_reactivation_campaign (

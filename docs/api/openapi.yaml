@@ -631,7 +631,7 @@ paths:
                     const: true
                   status:
                     type: object
-                    required: [campaign, control, counters]
+                    required: [campaign, control, counters, metrics]
                     properties:
                       campaign:
                         type: [object, 'null']
@@ -639,6 +639,14 @@ paths:
                         type: object
                       counters:
                         type: object
+                      metrics:
+                        type: object
+                        description: >-
+                          Agregados sem PII da versão mais recente da campanha nos
+                          últimos 30 dias: decisões, rejeições por motivo, eventos,
+                          envios por passo, interrupções, falhas e faixa estimada do
+                          custo-base SES. Respostas positivas ficam nulas enquanto
+                          não houver classificação explícita.
         '401':
           $ref: '#/components/responses/AdminSessionInvalid'
         '403':

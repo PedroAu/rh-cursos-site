@@ -184,6 +184,7 @@ quality_gate_tools:
 | 2026-09-18 | 0.5 | Corrigida a corrida autosave/salvamento manual do blog que quebrava o E2E da PR; rascunhos novos agora usam ID estável e retry idempotente. | Dex (@dev) |
 | 2026-09-18 | 0.6 | Adicionado gate fail-closed que valida os nomes dos secrets obrigatórios do Cloudflare Worker antes do deploy; leitura de produção identificou `SES_EVENTS_WEBHOOK_SECRET` e `EMAIL_UNSUBSCRIBE_SECRET` ausentes, sem acessar valores. | Gage (@devops) |
 | 2026-09-18 | 0.7 | Endurecida a corrida claim→SES: a sequência agora preserva o curso aprovado em snapshot imutável e o banco revalida destinatário e curso atuais antes de autorizar o envio. | Dex (@dev) |
+| 2026-09-18 | 0.8 | Projeção operacional ampliada por campanha/versão e janela de 30 dias, com reason codes, eventos por etapa, interrupções, falhas, ausência explícita de classificação positiva e faixa conservadora do custo-base SES. | Atlas (@analyst) |
 
 ## Dev Agent Record
 
@@ -211,6 +212,7 @@ Codex / GPT-5
 - O pipeline de frontend agora bloqueia publicação quando faltam secrets obrigatórios do Worker; o verificador consulta somente metadados e nunca imprime valores.
 - A inspeção read-only do Worker de produção confirmou quatro dos seis nomes exigidos e identificou `SES_EVENTS_WEBHOOK_SECRET` e `EMAIL_UNSUBSCRIBE_SECRET` como pendências de configuração.
 - A auditoria pós-claim fechou a troca silenciosa de destinatário/curso: o curso da sequência é imutável, o claim rejeita drift prévio e `sales_begin_send` compara novamente os dados capturados imediatamente antes do SES.
+- O status administrativo passou a incluir métricas agregadas sem PII por campanha/versão/período; respostas positivas permanecem nulas até classificação explícita, e custo SES é exibido como faixa com premissas documentadas.
 - Ativação ainda depende de dry-run na base real, revisão de elegibilidade, ID numérico do chat privado, identidade SES, testes sintéticos e nova autorização explícita.
 
 ### File List
@@ -237,6 +239,7 @@ Codex / GPT-5
 - `src/__tests__/app/api/admin-sales-reactivation-status-route.test.ts`
 - `src/__tests__/features/admin-blog.test.tsx`
 - `src/__tests__/features/sales-reactivation-core.test.ts`
+- `src/__tests__/features/sales-reactivation-status.test.ts`
 - `src/__tests__/ci/production-workflow.test.ts`
 - `src/__tests__/scripts/check-workers-required-secrets.test.ts`
 - `src/features/admin/blog/admin-blog-editor.tsx`
@@ -262,8 +265,8 @@ Codex / GPT-5
 
 - `npm run lint`: PASS.
 - `npm run typecheck`: PASS.
-- Vitest completo: PASS, 98 arquivos e 899 testes.
-- `npm run test:db`: PASS, 17 arquivos e 233 testes, incluindo concorrência e drift de destinatário/curso após claim.
+- Vitest completo: PASS, 100 arquivos e 906 testes.
+- `npm run test:db`: PASS, 17 arquivos e 237 testes, incluindo concorrência, métricas agregadas e drift de destinatário/curso após claim.
 - Worker: PASS, typecheck, 2 arquivos e 11 testes, bundle e smoke-load.
 - OpenAPI lint e drift: PASS, 23 rotas reconciliadas.
 - `cfn-lint infrastructure/sales-reactivation-orchestrator/template.yaml`: PASS.
