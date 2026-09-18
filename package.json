@@ -28,6 +28,7 @@
     "test": "npm run typecheck && node scripts/build-playwright-app.mjs && node scripts/run-playwright-test-build.mjs",
     "test:unit": "vitest run --no-file-parallelism --maxWorkers=1",
     "verify:imap-collector": "npm --prefix infrastructure/email-imap-collector run verify",
+    "verify:sales-reactivation": "npm --prefix infrastructure/sales-reactivation-orchestrator run verify",
     "test:coverage": "vitest run --coverage",
     "e2e:configure-supabase": "node scripts/configure-e2e-supabase.mjs",
     "test:e2e:smoke": "node scripts/run-playwright.mjs --project=functional",

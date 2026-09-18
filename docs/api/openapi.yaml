@@ -34,6 +34,8 @@ tags:
     description: Histórico auditável de interações de e-mail por lead
   - name: Email Events
     description: Ingestão server-to-server de eventos dos provedores de e-mail
+  - name: Sales Automation
+    description: Observabilidade administrativa do orquestrador comercial
   - name: Functions Proxy
     description: BFF same-origin que encaminha para as Edge Functions
 paths:
@@ -602,6 +604,46 @@ paths:
         '403':
           $ref: '#/components/responses/AdminAccessDenied'
         '500': { description: Falha ao consultar a linha do tempo }
+        '503':
+          $ref: '#/components/responses/AdminUnavailable'
+  /api/admin/sales/reactivation/status:
+    get:
+      tags: [Sales Automation]
+      summary: Consulta o estado do orquestrador de reativação
+      description: >-
+        Read model protegido por sessão administrativa SSR. Expõe campanha,
+        kill switches, limites e contadores operacionais, sem segredos ou PII.
+      operationId: getSalesReactivationStatus
+      security:
+        - supabaseSsrCookies: []
+      responses:
+        '200':
+          description: Estado operacional atual
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [ok, status]
+                properties:
+                  ok:
+                    type: boolean
+                    const: true
+                  status:
+                    type: object
+                    required: [campaign, control, counters]
+                    properties:
+                      campaign:
+                        type: [object, 'null']
+                      control:
+                        type: object
+                      counters:
+                        type: object
+        '401':
+          $ref: '#/components/responses/AdminSessionInvalid'
+        '403':
+          $ref: '#/components/responses/AdminAccessDenied'
+        '500': { description: Falha ao consultar o orquestrador }
         '503':
           $ref: '#/components/responses/AdminUnavailable'
   /api/webhooks/ses:

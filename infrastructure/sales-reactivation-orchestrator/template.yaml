@@ -1,0 +1,234 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  Orquestrador seguro de reativação comercial via SES e Telegram. O agendamento
+  nasce desabilitado e o runtime nasce em dry-run.
+
+Transform: AWS::Serverless-2016-10-31
+
+Parameters:
+  OrchestratorSecretArn:
+    Type: String
+    Description: ARN exato do segredo JSON existente no AWS Secrets Manager.
+  SesIdentityArn:
+    Type: String
+    Description: ARN da identidade SES verificada usada por pedro@rhcursos.com.br.
+  SesConfigurationSetName:
+    Type: String
+    Description: Configuration Set SES que publica entrega, bounce e complaint.
+  ScheduleExpression:
+    Type: String
+    Default: rate(5 minutes)
+  ScheduleState:
+    Type: String
+    Default: DISABLED
+    AllowedValues: [ENABLED, DISABLED]
+  RunMode:
+    Type: String
+    Default: DRY_RUN
+    AllowedValues: [DRY_RUN, LIVE]
+  BatchLimit:
+    Type: Number
+    Default: 5
+    MinValue: 1
+    MaxValue: 50
+  AllowedTelegramChatId:
+    Type: String
+    Default: '0'
+    AllowedPattern: '^-?[0-9]+$'
+    Description: ID numérico do único chat Telegram autorizado; 0 mantém LIVE bloqueado.
+
+Globals:
+  Function:
+    Runtime: nodejs22.x
+    Architectures: [arm64]
+    MemorySize: 512
+    Timeout: 50
+    Tracing: Active
+    LoggingConfig:
+      LogFormat: JSON
+      ApplicationLogLevel: INFO
+      SystemLogLevel: WARN
+
+Resources:
+  OrchestratorDlq:
+    Type: AWS::SQS::Queue
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      KmsMasterKeyId: alias/aws/sqs
+      MessageRetentionPeriod: 1209600
+
+  OrchestratorDlqPolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues: [!Ref OrchestratorDlq]
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: DenyInsecureTransport
+            Effect: Deny
+            Principal: '*'
+            Action: sqs:*
+            Resource: !GetAtt OrchestratorDlq.Arn
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'
+
+  OrchestratorExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: OrchestratorRuntimeAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${AWS::StackName}-sales-reactivation:*
+              - Effect: Allow
+                Action:
+                  - xray:PutTelemetryRecords
+                  - xray:PutTraceSegments
+                Resource: '*'
+              - Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource: !Ref OrchestratorSecretArn
+              - Effect: Allow
+                Action: ses:SendEmail
+                Resource:
+                  - !Ref SesIdentityArn
+                  - !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:configuration-set/${SesConfigurationSetName}
+              - Effect: Allow
+                Action: sqs:SendMessage
+                Resource: !GetAtt OrchestratorDlq.Arn
+
+  SalesReactivationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-sales-reactivation
+      CodeUri: dist/
+      Handler: handler.handler
+      Role: !GetAtt OrchestratorExecutionRole.Arn
+      ReservedConcurrentExecutions: 1
+      EventInvokeConfig:
+        MaximumEventAgeInSeconds: 300
+        MaximumRetryAttempts: 1
+        DestinationConfig:
+          OnFailure:
+            Type: SQS
+            Destination: !GetAtt OrchestratorDlq.Arn
+      Environment:
+        Variables:
+          ORCHESTRATOR_SECRET_ARN: !Ref OrchestratorSecretArn
+          CAMPAIGN_KEY: reactivation-v1
+          RUN_MODE: !Ref RunMode
+          CANDIDATE_PAGE_SIZE: '250'
+          SEND_BATCH_LIMIT: !Ref BatchLimit
+          CLAIM_LEASE_SECONDS: '120'
+          EXTERNAL_REQUEST_TIMEOUT_MS: '8000'
+          SES_CONFIGURATION_SET: !Ref SesConfigurationSetName
+          TELEGRAM_ALLOWED_CHAT_ID: !Ref AllowedTelegramChatId
+      Events:
+        OrchestratorSchedule:
+          Type: ScheduleV2
+          Properties:
+            ScheduleExpression: !Ref ScheduleExpression
+            State: !Ref ScheduleState
+            FlexibleTimeWindow:
+              Mode: 'OFF'
+            RetryPolicy:
+              MaximumEventAgeInSeconds: 300
+              MaximumRetryAttempts: 1
+            DeadLetterConfig:
+              Arn: !GetAtt OrchestratorDlq.Arn
+
+  OrchestratorLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${AWS::StackName}-sales-reactivation
+      RetentionInDays: 30
+
+  OrchestratorErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Orquestrador de reativação apresentou erro.
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref SalesReactivationFunction
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+
+  OrchestratorDurationAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: P99 do orquestrador excedeu 80 por cento do timeout.
+      Namespace: AWS/Lambda
+      MetricName: Duration
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref SalesReactivationFunction
+      ExtendedStatistic: p99
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 40000
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+
+  OrchestratorThrottlesAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Orquestrador foi limitado por concorrência.
+      Namespace: AWS/Lambda
+      MetricName: Throttles
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref SalesReactivationFunction
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+
+  OrchestratorDlqAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Existem execuções do orquestrador na DLQ.
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt OrchestratorDlq.QueueName
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+
+Outputs:
+  FunctionName:
+    Value: !Ref SalesReactivationFunction
+  DeadLetterQueueUrl:
+    Value: !Ref OrchestratorDlq
+  EffectiveScheduleState:
+    Value: !Ref ScheduleState
+  EffectiveRunMode:
+    Value: !Ref RunMode
