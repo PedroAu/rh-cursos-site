@@ -72,20 +72,48 @@ privacidade, eventos podem ocorrer mais de uma vez, e nenhuma diferença deve se
 tratada como causal sem experimento. A projeção administrativa usa uma janela
 móvel de 30 dias e preserva campanha, versão, policy, template e período.
 
+## Planejamento das bases de contatos
+
+Antes de qualquer escrita no CRM, execute o planejador local somente leitura.
+Ele aceita uma exportação atual do CRM e uma ou mais bases, reconhece os schemas
+HubSpot/site/leads, preserva cabeçalhos duplicados por posição, normaliza e-mail,
+deduplica somente por e-mail exato e usa telefone apenas como sinal de revisão.
+O relatório é agregado: não imprime nome, e-mail, telefone ou linhas de contato.
+
+```bash
+npm run sales:contacts:plan -- \
+  --crm-file /caminho/contatos-exportado-site.csv \
+  --reference-date 2026-09-18T12:00:00-03:00 \
+  --inactive-days 15 \
+  /caminho/base-hubspot-1.csv \
+  /caminho/base-hubspot-2.csv \
+  /caminho/leads.csv
+```
+
+O resultado nunca autoriza envio e não grava um arquivo intermediário com PII.
+`MISSING_CONTACT_PERMISSION`, `SUPPRESSED_SOURCE_EVIDENCE`,
+`RECENT_SOURCE_INTERACTION` e `SOURCE_HISTORY_DATE_UNKNOWN` bloqueiam o registro.
+`REQUIRES_CRM_HISTORY_CHECK` significa apenas que o arquivo não trouxe um bloqueio:
+o e-mail ainda precisa ser confrontado com o CRM/event store produtivo e passar
+pela policy fail-closed. Conflitos de nome, telefone ou organização devem ser
+revisados; o importador não sobrescreve silenciosamente o cadastro oficial.
+
 ## Primeiro lote
 
-1. Aplicar a migração no projeto isolado e repetir pgTAP.
-2. Implantar Lambda com `ScheduleState=DISABLED`, `RunMode=DRY_RUN` e chat permitido `0`.
-3. Aprovar conteúdo e cadastrar evidências de permissão somente após revisão jurídica/operacional.
-4. Executar dry-run, exportar reason codes e revisar a coorte manualmente.
-5. Validar identidade SES, SPF/DKIM/DMARC e Configuration Set.
-6. Usar um contato sintético para testar inbox, reply-to Locaweb, descadastro, bounce e Telegram.
-7. Registrar a aprovação do conteúdo, coorte, janela e volume inicial.
-8. Alterar o allowlist do chat para o ID privado confirmado.
-9. Ativar controle/campanha, publicar `RunMode=LIVE` ainda com schedule desligado.
-10. Executar `run-batch --confirm-live --discover` em um lote manual pequeno;
+1. Gerar o plano agregado das bases e revisar duplicidades, conflitos, histórico e base legal.
+2. Comparar candidatos com o CRM/event store produtivo; não importar ou reativar por classificação temática.
+3. Aplicar a migração no projeto isolado e repetir pgTAP.
+4. Implantar Lambda com `ScheduleState=DISABLED`, `RunMode=DRY_RUN` e chat permitido `0`.
+5. Aprovar conteúdo e cadastrar evidências de permissão somente após revisão jurídica/operacional.
+6. Executar dry-run, exportar reason codes e revisar a coorte manualmente.
+7. Validar identidade SES, SPF/DKIM/DMARC e Configuration Set.
+8. Usar um contato sintético para testar inbox, reply-to Locaweb, descadastro, bounce e Telegram.
+9. Registrar a aprovação do conteúdo, coorte, janela e volume inicial.
+10. Alterar o allowlist do chat para o ID privado confirmado.
+11. Ativar controle/campanha, publicar `RunMode=LIVE` ainda com schedule desligado.
+12. Executar `run-batch --confirm-live --discover` em um lote manual pequeno;
     conferir coorte, timeline e métricas.
-11. Só depois habilitar o schedule.
+13. Só depois habilitar o schedule.
 
 ## Incidente e rollback
 
@@ -99,6 +127,7 @@ móvel de 30 dias e preserva campanha, versão, policy, template e período.
 ## Evidência mínima de fechamento
 
 - `npm run verify:sales-reactivation`
+- `npm run sales:contacts:plan -- --crm-file <export.csv> <bases.csv...>`
 - `npm run test:db`
 - `npm run docs:api:lint && npm run docs:api:check-drift`
 - `cfn-lint infrastructure/sales-reactivation-orchestrator/template.yaml`
