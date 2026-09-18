@@ -348,7 +348,7 @@ export function buildContactImportCandidates({ sources }) {
 
   const fileSetDigest = sha256(
     `contact-import-v1\n${sources
-      .map((source) => `${source.name}:${sha256(source.text)}`)
+      .map((source) => sha256(source.text))
       .sort()
       .join("\n")}`,
   );

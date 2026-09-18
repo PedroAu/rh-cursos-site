@@ -108,6 +108,14 @@ describe("contact import plan", () => {
     });
 
     expect(result.fileSetDigest).toBe(reversed.fileSetDigest);
+    expect(result.fileSetDigest).toBe(
+      buildContactImportCandidates({
+        sources: [
+          { name: "arquivo-renomeado-a.csv", text: segmentCsv },
+          { name: "arquivo-renomeado-b.csv", text: leadsCsv },
+        ],
+      }).fileSetDigest,
+    );
     expect(result.stats).toMatchObject({
       canonical_records: 3,
       candidates_ready: 2,
