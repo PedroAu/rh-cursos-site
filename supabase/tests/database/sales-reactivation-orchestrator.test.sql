@@ -1,7 +1,7 @@
 -- Story 2026-09-18 — guardrails do orquestrador de reativação.
 begin;
 
-select plan(33);
+select plan(37);
 
 select ok(not (select enabled from public.sales_orchestrator_control where id = 'global'), 'automação nasce desabilitada');
 select ok((select dry_run from public.sales_orchestrator_control where id = 'global'), 'dry-run nasce ativo');
@@ -119,6 +119,11 @@ select is(
   3,
   'sequência materializa três passos sem duplicação'
 );
+select is(
+  (select campaign_course_title from public.lead_email_sequence where id = (select id from created_sequence)),
+  'Auditoria da Folha de Pagamento',
+  'sequência preserva o curso aprovado como snapshot auditável'
+);
 
 create temporary table claimed_step as
 select * from public.sales_claim_reactivation_steps(
@@ -144,7 +149,9 @@ select ok(
     (select attempt_id from claimed_step),
     '40000000-0000-0000-0000-000000000004',
     repeat('a', 64),
-    '<pgtap-reactivation@example.test>'
+    '<pgtap-reactivation@example.test>',
+    (select lead_email from claimed_step),
+    (select course_title from claimed_step)
   ),
   'begin-send revalida e aceita claim válido'
 );
@@ -170,6 +177,33 @@ select * from public.sales_claim_reactivation_steps(
   120,
   1
 );
+update public.lead set email = 'novo-endereco@example.test' where id = 'reactivation-lead-1';
+select ok(
+  not public.sales_begin_send(
+    (select attempt_id from guardrail_step),
+    '42000000-0000-4000-8000-000000000004',
+    repeat('b', 64),
+    '<pgtap-stale-email@example.test>',
+    (select lead_email from guardrail_step),
+    (select course_title from guardrail_step)
+  ),
+  'begin-send bloqueia destinatário alterado depois do claim'
+);
+update public.lead
+set email = (select lead_email from guardrail_step), tema_interesse = 'Tema fora da campanha'
+where id = 'reactivation-lead-1';
+select ok(
+  not public.sales_begin_send(
+    (select attempt_id from guardrail_step),
+    '42000000-0000-4000-8000-000000000004',
+    repeat('c', 64),
+    '<pgtap-stale-course@example.test>',
+    (select lead_email from guardrail_step),
+    (select course_title from guardrail_step)
+  ),
+  'begin-send bloqueia curso alterado depois do claim'
+);
+update public.lead set tema_interesse = (select course_title from guardrail_step) where id = 'reactivation-lead-1';
 select ok(
   public.sales_mark_send_failure(
     (select attempt_id from guardrail_step),
@@ -222,6 +256,14 @@ select throws_ok(
   '55000',
   'Registro comercial auditável é append-only.',
   'permissão é append-only no fluxo normal'
+);
+select throws_ok(
+  $$update public.lead_email_sequence
+    set campaign_course_title = 'Curso adulterado'
+    where lead_id = 'reactivation-lead-1' and campaign_key = 'reactivation-v1@1'$$,
+  '55000',
+  'Curso auditável da sequência é imutável.',
+  'curso capturado na sequência não pode ser alterado'
 );
 reset role;
 

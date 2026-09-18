@@ -148,7 +148,14 @@ describe("sales orchestrator", () => {
       { discover: true },
     );
     expect(result).toMatchObject({ created: 1, claimed: 1, sent: 1, failed: 0, notificationsSent: 1 });
-    expect(store.beginSend).toHaveBeenCalledOnce();
+    expect(store.beginSend).toHaveBeenCalledWith(
+      step.attemptId,
+      expect.any(String),
+      expect.any(String),
+      expect.any(String),
+      step.leadEmail,
+      step.courseTitle,
+    );
     expect(email.send).toHaveBeenCalledOnce();
     expect(store.completeSend).toHaveBeenCalledWith(step.attemptId, expect.any(String), "ses-message-1", expect.any(Date));
     expect(telegram.send).toHaveBeenCalledOnce();
@@ -172,6 +179,32 @@ describe("sales orchestrator", () => {
     expect(result).toMatchObject({ sent: 0, failed: 1 });
     expect(email.send).not.toHaveBeenCalled();
     expect(store.failSend).toHaveBeenCalledWith(step.attemptId, expect.any(String), "RETRYABLE_FAILED", "GUARDRAIL_REJECTED");
+  });
+
+  it("permanently rejects a claimed course outside the approved campaign", async () => {
+    const store = fakeStore({
+      claimSteps: vi.fn().mockResolvedValue([{ ...step, courseTitle: "Curso adulterado" }]),
+      claimNotifications: vi.fn().mockResolvedValue([]),
+    });
+    const email: EmailSender = { send: vi.fn() };
+    const telegram: TelegramSender = { send: vi.fn() };
+
+    const result = await runLiveBatch(
+      { store, email, telegram },
+      config,
+      secret,
+      new Date("2026-09-18T13:00:00.000Z"),
+    );
+
+    expect(result).toMatchObject({ sent: 0, failed: 1 });
+    expect(email.send).not.toHaveBeenCalled();
+    expect(store.beginSend).not.toHaveBeenCalled();
+    expect(store.failSend).toHaveBeenCalledWith(
+      step.attemptId,
+      expect.any(String),
+      "PERMANENT_FAILED",
+      "INVALID_CLAIMED_PAYLOAD",
+    );
   });
 
   it("blocks live mode when the private Telegram chat is not allowlisted", async () => {

@@ -159,6 +159,9 @@ alter table public.lead_email_sequence_step
     or (claim_token is not null and claim_expires_at is not null)
   );
 
+alter table public.lead_email_sequence
+  add column if not exists campaign_course_title varchar(240);
+
 create table if not exists public.sales_send_attempt (
   id uuid primary key default gen_random_uuid(),
   sequence_step_id uuid not null references public.lead_email_sequence_step(id) on delete restrict,
@@ -259,6 +262,7 @@ set search_path = public, pg_temp
 as $$
 declare
   v_sequence_id uuid;
+  v_sequence_course text;
   v_campaign public.sales_reactivation_campaign%rowtype;
   v_permission public.lead_contact_permission_event%rowtype;
   v_control public.sales_orchestrator_control%rowtype;
@@ -313,21 +317,25 @@ begin
     raise exception 'Lead possui interação recente.' using errcode = 'P0001';
   end if;
 
-  select id into v_sequence_id
+  select id, campaign_course_title into v_sequence_id, v_sequence_course
   from public.lead_email_sequence
   where lead_id = p_lead_id
     and campaign_key = v_campaign.campaign_key || '@' || v_campaign.version::text
   order by created_at
   limit 1;
   if v_sequence_id is not null then
-    if exists (select 1 from public.lead_email_sequence where id = v_sequence_id and status = 'ACTIVE') then
+    if exists (select 1 from public.lead_email_sequence where id = v_sequence_id and status = 'ACTIVE')
+      and v_sequence_course = v_course_title then
       return v_sequence_id;
+    end if;
+    if exists (select 1 from public.lead_email_sequence where id = v_sequence_id and status = 'ACTIVE') then
+      raise exception 'Curso do lead mudou após a criação da sequência.' using errcode = 'P0001';
     end if;
     raise exception 'Lead já participou desta versão de campanha.' using errcode = 'P0001';
   end if;
 
-  insert into public.lead_email_sequence (lead_id, campaign_key)
-  values (p_lead_id, v_campaign.campaign_key || '@' || v_campaign.version::text)
+  insert into public.lead_email_sequence (lead_id, campaign_key, campaign_course_title)
+  values (p_lead_id, v_campaign.campaign_key || '@' || v_campaign.version::text, v_course_title)
   on conflict do nothing
   returning id into v_sequence_id;
 
@@ -336,6 +344,7 @@ begin
     from public.lead_email_sequence
     where lead_id = p_lead_id
       and campaign_key = v_campaign.campaign_key || '@' || v_campaign.version::text
+      and campaign_course_title = v_course_title
       and status = 'ACTIVE';
   end if;
   if v_sequence_id is null then
@@ -499,10 +508,26 @@ begin
     select step.id
     from public.lead_email_sequence_step step
     join public.lead_email_sequence sequence on sequence.id = step.sequence_id and sequence.status = 'ACTIVE'
+    join public.lead current_lead
+      on current_lead.id = sequence.lead_id
+      and current_lead.deleted_at is null
+      and current_lead.email ~* '^[^[:space:]@]+@[^[:space:]@]+[.][^[:space:]@]+$'
+    left join public.curso current_course
+      on current_course.id = current_lead.curso_id and current_course.deleted_at is null
     join public.sales_reactivation_campaign campaign
       on sequence.campaign_key = campaign.campaign_key || '@' || campaign.version::text
       and campaign.status = 'ACTIVE' and campaign.content_status = 'APPROVED'
     where step.status = 'PENDING'
+      and sequence.campaign_course_title is not null
+      and coalesce(
+        nullif(trim(current_course.titulo), ''),
+        nullif(trim(current_lead.tema_interesse), '')
+      ) = sequence.campaign_course_title
+      and exists (
+        select 1 from public.sales_reactivation_campaign_course campaign_course
+        where campaign_course.campaign_id = campaign.id
+          and campaign_course.course_title = sequence.campaign_course_title
+      )
       and step.attempt_count < 10
       and step.due_at <= p_now
       and (step.claim_expires_at is null or step.claim_expires_at <= p_now)
@@ -548,7 +573,7 @@ begin
     sequence.lead_id,
     lead.nome::text,
     lead.email::text,
-    coalesce(nullif(trim(course.titulo), ''), nullif(trim(lead.tema_interesse), ''))::text,
+    sequence.campaign_course_title::text,
     campaign.id,
     campaign.campaign_key,
     campaign.version,
@@ -562,7 +587,6 @@ begin
   join claimed on claimed.id = attempts.attempted_step_id
   join public.lead_email_sequence sequence on sequence.id = claimed.sequence_id
   join public.lead on lead.id = sequence.lead_id and lead.deleted_at is null
-  left join public.curso course on course.id = lead.curso_id and course.deleted_at is null
   join public.sales_reactivation_campaign campaign
     on sequence.campaign_key = campaign.campaign_key || '@' || campaign.version::text
   join public.sales_reactivation_campaign_step campaign_step
@@ -574,7 +598,9 @@ create or replace function public.sales_begin_send(
   p_attempt_id uuid,
   p_claim_token uuid,
   p_payload_hash varchar,
-  p_rfc_message_id varchar
+  p_rfc_message_id varchar,
+  p_recipient_email varchar,
+  p_course_title text
 )
 returns boolean
 language plpgsql
@@ -608,11 +634,32 @@ begin
     )
     and exists (
       select 1
+      from public.lead current_lead
+      left join public.curso current_course
+        on current_course.id = current_lead.curso_id and current_course.deleted_at is null
+      where current_lead.id = sequence.lead_id
+        and current_lead.deleted_at is null
+        and current_lead.email ~* '^[^[:space:]@]+@[^[:space:]@]+[.][^[:space:]@]+$'
+        and lower(trim(current_lead.email)) = lower(trim(p_recipient_email))
+        and coalesce(
+          nullif(trim(current_course.titulo), ''),
+          nullif(trim(current_lead.tema_interesse), '')
+        ) = p_course_title
+        and sequence.campaign_course_title = p_course_title
+    )
+    and exists (
+      select 1
       from public.sales_reactivation_campaign campaign
       join public.sales_orchestrator_control control on control.id = 'global'
       where sequence.campaign_key = campaign.campaign_key || '@' || campaign.version::text
         and campaign.status = 'ACTIVE'
         and campaign.content_status = 'APPROVED'
+        and exists (
+          select 1
+          from public.sales_reactivation_campaign_course campaign_course
+          where campaign_course.campaign_id = campaign.id
+            and campaign_course.course_title = p_course_title
+        )
         and control.enabled
         and not control.dry_run
         and not control.kill_switch
@@ -958,6 +1005,20 @@ begin
 end;
 $$;
 
+create or replace function public.protect_sales_sequence_course()
+returns trigger
+language plpgsql
+set search_path = public, pg_temp
+as $$
+begin
+  if current_user not in ('postgres', 'supabase_admin')
+    and old.campaign_course_title is distinct from new.campaign_course_title then
+    raise exception 'Curso auditável da sequência é imutável.' using errcode = '55000';
+  end if;
+  return new;
+end;
+$$;
+
 drop trigger if exists lead_contact_permission_append_only on public.lead_contact_permission_event;
 create trigger lead_contact_permission_append_only before update or delete on public.lead_contact_permission_event
   for each row execute function public.reject_sales_audit_mutation();
@@ -976,6 +1037,9 @@ create trigger sales_reactivation_campaign_step_append_only before update or del
 drop trigger if exists sales_reactivation_campaign_course_append_only on public.sales_reactivation_campaign_course;
 create trigger sales_reactivation_campaign_course_append_only before update or delete on public.sales_reactivation_campaign_course
   for each row execute function public.reject_sales_audit_mutation();
+drop trigger if exists sales_reactivation_sequence_course_immutable on public.lead_email_sequence;
+create trigger sales_reactivation_sequence_course_immutable before update of campaign_course_title on public.lead_email_sequence
+  for each row execute function public.protect_sales_sequence_course();
 
 alter table public.lead_contact_permission_event enable row level security;
 alter table public.sales_reactivation_campaign enable row level security;
@@ -1025,7 +1089,7 @@ create policy sales_notification_outbox_admin_select on public.sales_notificatio
 revoke all on function public.sales_create_reactivation_sequence(varchar, uuid, uuid, varchar, varchar) from public, anon, authenticated;
 revoke all on function public.sales_list_reactivation_candidates(uuid, integer, integer) from public, anon, authenticated;
 revoke all on function public.sales_claim_reactivation_steps(uuid, timestamptz, integer, integer) from public, anon, authenticated;
-revoke all on function public.sales_begin_send(uuid, uuid, varchar, varchar) from public, anon, authenticated;
+revoke all on function public.sales_begin_send(uuid, uuid, varchar, varchar, varchar, text) from public, anon, authenticated;
 revoke all on function public.sales_complete_send(uuid, uuid, varchar, timestamptz) from public, anon, authenticated;
 revoke all on function public.sales_mark_send_failure(uuid, uuid, varchar, varchar) from public, anon, authenticated;
 revoke all on function public.sales_claim_notifications(uuid, timestamptz, integer, integer) from public, anon, authenticated;
@@ -1035,7 +1099,7 @@ revoke all on function public.sales_set_orchestrator_state(varchar, varchar, var
 grant execute on function public.sales_create_reactivation_sequence(varchar, uuid, uuid, varchar, varchar) to service_role;
 grant execute on function public.sales_list_reactivation_candidates(uuid, integer, integer) to service_role;
 grant execute on function public.sales_claim_reactivation_steps(uuid, timestamptz, integer, integer) to service_role;
-grant execute on function public.sales_begin_send(uuid, uuid, varchar, varchar) to service_role;
+grant execute on function public.sales_begin_send(uuid, uuid, varchar, varchar, varchar, text) to service_role;
 grant execute on function public.sales_complete_send(uuid, uuid, varchar, timestamptz) to service_role;
 grant execute on function public.sales_mark_send_failure(uuid, uuid, varchar, varchar) to service_role;
 grant execute on function public.sales_claim_notifications(uuid, timestamptz, integer, integer) to service_role;

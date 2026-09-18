@@ -212,14 +212,35 @@ export async function runLiveBatch(
   let failed = 0;
 
   for (const step of steps) {
-    const url = unsubscribeUrl(secret, step.leadId, step.attemptId, now);
-    const rendered = renderReactivationTemplate(step.stepIndex, {
-      firstName: firstName(step.leadName),
-      courseTitle: asCourse(step.courseTitle),
-      unsubscribeUrl: url,
-    });
+    let url: string;
+    let rendered: ReturnType<typeof renderReactivationTemplate>;
+    try {
+      url = unsubscribeUrl(secret, step.leadId, step.attemptId, now);
+      rendered = renderReactivationTemplate(step.stepIndex, {
+        firstName: firstName(step.leadName),
+        courseTitle: asCourse(step.courseTitle),
+        unsubscribeUrl: url,
+      });
+    } catch (error) {
+      await dependencies.store.failSend(
+        step.attemptId,
+        claimToken,
+        "PERMANENT_FAILED",
+        "INVALID_CLAIMED_PAYLOAD",
+      );
+      failed += 1;
+      log.warn("claimed step payload rejected", { attemptId: step.attemptId, ...errorFields(error) });
+      continue;
+    }
     const correlationMessageId = `<attempt-${step.attemptId}@rhcursos.com.br>`;
-    const canSend = await dependencies.store.beginSend(step.attemptId, claimToken, rendered.payloadHash, correlationMessageId);
+    const canSend = await dependencies.store.beginSend(
+      step.attemptId,
+      claimToken,
+      rendered.payloadHash,
+      correlationMessageId,
+      step.leadEmail,
+      step.courseTitle,
+    );
     if (!canSend) {
       await dependencies.store.failSend(step.attemptId, claimToken, "RETRYABLE_FAILED", "GUARDRAIL_REJECTED");
       failed += 1;

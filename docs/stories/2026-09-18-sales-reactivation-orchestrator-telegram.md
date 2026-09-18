@@ -183,6 +183,7 @@ quality_gate_tools:
 | 2026-09-18 | 0.4 | Commit candidato `ca426b0` preparado para handoff; push, deploy e ativação não executados. | Gage (@devops) |
 | 2026-09-18 | 0.5 | Corrigida a corrida autosave/salvamento manual do blog que quebrava o E2E da PR; rascunhos novos agora usam ID estável e retry idempotente. | Dex (@dev) |
 | 2026-09-18 | 0.6 | Adicionado gate fail-closed que valida os nomes dos secrets obrigatórios do Cloudflare Worker antes do deploy; leitura de produção identificou `SES_EVENTS_WEBHOOK_SECRET` e `EMAIL_UNSUBSCRIBE_SECRET` ausentes, sem acessar valores. | Gage (@devops) |
+| 2026-09-18 | 0.7 | Endurecida a corrida claim→SES: a sequência agora preserva o curso aprovado em snapshot imutável e o banco revalida destinatário e curso atuais antes de autorizar o envio. | Dex (@dev) |
 
 ## Dev Agent Record
 
@@ -209,6 +210,7 @@ Codex / GPT-5
 - O gate E2E pendente da PR foi corrigido e validado localmente em modo equivalente à CI; o check remoto só poderá ser renovado após push autorizado.
 - O pipeline de frontend agora bloqueia publicação quando faltam secrets obrigatórios do Worker; o verificador consulta somente metadados e nunca imprime valores.
 - A inspeção read-only do Worker de produção confirmou quatro dos seis nomes exigidos e identificou `SES_EVENTS_WEBHOOK_SECRET` e `EMAIL_UNSUBSCRIBE_SECRET` como pendências de configuração.
+- A auditoria pós-claim fechou a troca silenciosa de destinatário/curso: o curso da sequência é imutável, o claim rejeita drift prévio e `sales_begin_send` compara novamente os dados capturados imediatamente antes do SES.
 - Ativação ainda depende de dry-run na base real, revisão de elegibilidade, ID numérico do chat privado, identidade SES, testes sintéticos e nova autorização explícita.
 
 ### File List
@@ -261,8 +263,8 @@ Codex / GPT-5
 - `npm run lint`: PASS.
 - `npm run typecheck`: PASS.
 - Vitest completo: PASS, 98 arquivos e 899 testes.
-- `npm run test:db`: PASS, 17 arquivos e 229 testes, incluindo concorrência.
-- Worker: PASS, typecheck, 2 arquivos e 10 testes, bundle e smoke-load.
+- `npm run test:db`: PASS, 17 arquivos e 233 testes, incluindo concorrência e drift de destinatário/curso após claim.
+- Worker: PASS, typecheck, 2 arquivos e 11 testes, bundle e smoke-load.
 - OpenAPI lint e drift: PASS, 23 rotas reconciliadas.
 - `cfn-lint infrastructure/sales-reactivation-orchestrator/template.yaml`: PASS.
 - Build de produção: PASS, 48/48 páginas no Supabase local isolado.

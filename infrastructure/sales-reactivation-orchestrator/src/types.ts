@@ -112,7 +112,14 @@ export interface SalesStore {
   }): Promise<void>;
   createSequence(input: { leadId: string; campaignId: string; runId: string; correlationId: string; actorId: string }): Promise<string>;
   claimSteps(claimToken: string, now: Date, leaseSeconds: number, limit: number): Promise<ClaimedStep[]>;
-  beginSend(attemptId: string, claimToken: string, payloadHash: string, rfcMessageId: string): Promise<boolean>;
+  beginSend(
+    attemptId: string,
+    claimToken: string,
+    payloadHash: string,
+    rfcMessageId: string,
+    recipientEmail: string,
+    courseTitle: string,
+  ): Promise<boolean>;
   completeSend(attemptId: string, claimToken: string, providerMessageId: string, occurredAt: Date): Promise<void>;
   failSend(attemptId: string, claimToken: string, status: "RETRYABLE_FAILED" | "PERMANENT_FAILED" | "AMBIGUOUS", errorCode: string): Promise<void>;
   claimNotifications(claimToken: string, now: Date, leaseSeconds: number, limit: number): Promise<ClaimedNotification[]>;

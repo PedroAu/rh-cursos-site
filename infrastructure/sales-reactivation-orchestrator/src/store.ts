@@ -190,12 +190,21 @@ export class SupabaseSalesStore implements SalesStore {
     }));
   }
 
-  async beginSend(attemptId: string, claimToken: string, payloadHash: string, rfcMessageId: string): Promise<boolean> {
+  async beginSend(
+    attemptId: string,
+    claimToken: string,
+    payloadHash: string,
+    rfcMessageId: string,
+    recipientEmail: string,
+    courseTitle: string,
+  ): Promise<boolean> {
     const result = await this.client.rpc("sales_begin_send", {
       p_attempt_id: attemptId,
       p_claim_token: claimToken,
       p_payload_hash: payloadHash,
       p_rfc_message_id: rfcMessageId,
+      p_recipient_email: recipientEmail,
+      p_course_title: courseTitle,
     });
     return Boolean(dataOrThrow(result as QueryResult<boolean>, "begin send"));
   }
