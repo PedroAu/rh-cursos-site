@@ -155,6 +155,7 @@ Nenhum modo cria sequência de reativação ou envia mensagem.
 - `npm run sales:contacts:plan -- --crm-file <export.csv> <bases.csv...>`
 - `npm run sales:contacts:import -- --mode dry-run <bases.csv...>` (somente após autorização)
 - `npm run test:db`
+- o gate de banco inclui corrida real de dois lotes sobre o mesmo e-mail
 - `npm run docs:api:lint && npm run docs:api:check-drift`
 - `cfn-lint infrastructure/sales-reactivation-orchestrator/template.yaml`
 - build de produção do site

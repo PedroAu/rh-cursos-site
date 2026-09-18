@@ -187,6 +187,7 @@ quality_gate_tools:
 | 2026-09-18 | 0.8 | Projeção operacional ampliada por campanha/versão e janela de 30 dias, com reason codes, eventos por etapa, interrupções, falhas, ausência explícita de classificação positiva e faixa conservadora do custo-base SES. | Atlas (@analyst) |
 | 2026-09-18 | 0.9 | Adicionado planejador local e somente leitura para comparar a exportação do CRM com as quatro bases, deduplicar por e-mail, detectar histórico/supressões/conflitos e manter todos os contatos bloqueados até o gate produtivo. | Dex (@dev) |
 | 2026-09-18 | 1.0 | Implementado pipeline de importação auditável com dry-run, RPCs service-role, preservação de PII, classificação separada, histórico importado e dupla confirmação para APPLY; nenhuma execução remota realizada. | Dex (@dev) |
+| 2026-09-18 | 1.1 | Adicionado teste concorrente em duas conexões reais: duas importações simultâneas do mesmo e-mail convergem para um único lead, com decisões CREATED/EXISTING e uma única permissão UNKNOWN. | Quinn (@qa) |
 
 ## Dev Agent Record
 
@@ -219,6 +220,7 @@ Codex / GPT-5
 - Execução sobre as quatro bases: 6.913 linhas viraram 5.668 registros canônicos; 2.923 já constam na exportação do CRM e 2.745 são novos. Entre os novos, 505 não têm base legal registrada, 47 trazem supressão e 2.193 permanecem bloqueados até a consulta ao histórico produtivo.
 - O gate de banco agora compara por e-mail normalizado sob lock transacional, bloqueia duplicidade ambígua, mantém auditoria sem PII, não sobrescreve cadastro existente e nunca converte base legal da planilha em permissão aprovada. O executor exige confirmação textual adicional no modo APPLY.
 - Preparação das três bases externas para o RPC: 3.990 linhas, 2.790 e-mails canônicos e 2.731 candidatos seguros; 59 conflitos de nome ficaram fora do payload, 731 organizações divergentes foram omitidas, 2.096 registros trazem histórico e 46 trazem evento terminal de bounce. A comparação produtiva ainda não foi executada.
+- A unicidade operacional foi comprovada com duas sessões PostgreSQL concorrentes: o advisory lock por e-mail produziu exatamente um `CREATED` e um `EXISTING`, sem duplicar lead, segmento ou evento de permissão.
 - Ativação ainda depende de dry-run na base real, revisão de elegibilidade, ID numérico do chat privado, identidade SES, testes sintéticos e nova autorização explícita.
 
 ### File List
@@ -246,6 +248,7 @@ Codex / GPT-5
 - `scripts/contact-import-plan.d.mts`
 - `scripts/import-contacts.mjs`
 - `scripts/import-contacts.d.mts`
+- `scripts/test-db-contact-import-concurrency.mjs`
 - `src/__tests__/app/api/admin-sales-reactivation-status-route.test.ts`
 - `src/__tests__/features/admin-blog.test.tsx`
 - `src/__tests__/features/contact-import-plan.test.ts`
