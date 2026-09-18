@@ -686,6 +686,7 @@ test.describe("admin CRUD — ciclo completo criar → salvar → excluir", () =
   });
 
   test("blog: cria respeitando os tamanhos mínimos de resumo/conteúdo e exclui", async ({ page }) => {
+    test.setTimeout(75_000);
     const title = `${MARKER} post ${Date.now()}`;
     await page.goto("/admin/blog");
 
@@ -701,20 +702,41 @@ test.describe("admin CRUD — ciclo completo criar → salvar → excluir", () =
         "para passar na validação de admin-form-validation.ts, então este parágrafo é propositalmente longo."
     );
 
+    const saveResponsePromise = page.waitForResponse(
+      (response) => {
+        const request = response.request();
+        if (request.method() !== "POST" || !response.url().includes("/api/functions/admin-resources")) {
+          return false;
+        }
+        try {
+          const body = request.postDataJSON() as { resource?: string; action?: string };
+          return body.resource === "blog" && body.action === "save-draft";
+        } catch {
+          return false;
+        }
+      },
+      { timeout: 45_000 }
+    );
+
     await editor.getByRole("button", { name: "Salvar" }).click();
-    await expect
-      .poll(
-        async () => {
-          const created = await findBlogPostByTitle(title);
-          return created ?? null;
-        },
-        { timeout: 30_000, intervals: [250, 500, 1_000] }
-      )
-      .not.toBeNull();
+    const saveResponse = await saveResponsePromise;
+    const saveBody = (await saveResponse.json().catch(() => null)) as {
+      ok?: unknown;
+      data?: { id?: unknown };
+      error?: unknown;
+    } | null;
+    if (!saveResponse.ok() || saveBody?.ok !== true) {
+      throw new Error(
+        `admin-resources falhou ao salvar blog; HTTP ${saveResponse.status()}; erro=${String(saveBody?.error ?? "desconhecido")}`
+      );
+    }
+    const savedId = typeof saveBody.data?.id === "string" ? saveBody.data.id.trim() : "";
+    expect(savedId).not.toHaveLength(0);
+    await expect(page).toHaveURL(new RegExp(`/admin/blog/${savedId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/editar$`));
 
     const created = await findBlogPostByTitle(title);
-    expect(created?.id).toBeTruthy();
-    await deleteBlogPostById(created!.id);
+    expect(created?.id).toBe(savedId);
+    await deleteBlogPostById(savedId);
   });
 
   test("leads: cria manualmente no admin e exclui", async ({ page }) => {

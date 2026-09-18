@@ -132,6 +132,7 @@ export function AdminBlogEditor({ initialPost }: { initialPost?: BlogPost }) {
   const { saveBlogDraft, saveBlogContent, transitionBlogPost, deleteBlogPost } = useAdminStore();
   const [selectedId, setSelectedId] = useState<string | null>(initialPost?.id ?? null);
   const postIdRef = useRef(initialPost?.id);
+  const pendingCreateIdRef = useRef<string | null>(null);
   const savingRef = useRef<Promise<string | undefined> | null>(null);
   const [form, setForm] = useState<EditorDraft>(() => initialPost ? draftFromPost(initialPost) : emptyDraft);
   const [preview, setPreview] = useState(false);
@@ -160,11 +161,22 @@ export function AdminBlogEditor({ initialPost }: { initialPost?: BlogPost }) {
 
   const persistCurrent = useCallback(async (silent = false): Promise<string | undefined> => {
     // Serialize saves so an autosave and a manual save cannot create two posts.
-    if (savingRef.current) await savingRef.current;
+    if (savingRef.current) {
+      try {
+        await savingRef.current;
+      } catch (error) {
+        // A manual save is an explicit retry after an autosave failure. Silent
+        // saves keep propagating the failure so their caller can show feedback.
+        if (silent) throw error;
+      }
+    }
     const draft = formRef.current;
     if (savedFormRef.current === draft && postIdRef.current) return postIdRef.current;
     const creating = !postIdRef.current;
-    const payload = toPayload(draft, postIdRef.current);
+    if (creating && !pendingCreateIdRef.current) {
+      pendingCreateIdRef.current = `post-${globalThis.crypto.randomUUID()}`;
+    }
+    const payload = toPayload(draft, postIdRef.current ?? pendingCreateIdRef.current ?? undefined);
     const pending = draft.status === "Rascunho"
       ? saveBlogDraft(payload, { silent })
       : postIdRef.current
@@ -175,6 +187,7 @@ export function AdminBlogEditor({ initialPost }: { initialPost?: BlogPost }) {
       const id = await pending;
       if (!id) throw new Error("Não foi possível confirmar o salvamento do artigo.");
       postIdRef.current = id;
+      pendingCreateIdRef.current = null;
       setSelectedId(id);
       if (creating) router.push(`/admin/blog/${encodeURIComponent(id)}/editar`);
       savedFormRef.current = draft;
