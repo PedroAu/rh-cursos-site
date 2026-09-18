@@ -190,6 +190,8 @@ quality_gate_tools:
 | 2026-09-18 | 1.1 | Adicionado teste concorrente em duas conexões reais: duas importações simultâneas do mesmo e-mail convergem para um único lead, com decisões CREATED/EXISTING e uma única permissão UNKNOWN. | Quinn (@qa) |
 | 2026-09-18 | 1.2 | Consolidado checklist de go-live com estado verificável, ordem de rollout e autorizações separadas para push, merge, infraestrutura, dry-run, importação, primeiro lote e schedule. | Gage (@devops) |
 | 2026-09-18 | 1.3 | Versionado o caminho SES → EventBridge → API Destination → Cloudflare com filtro por identidade/configuração, segredo por referência dinâmica, retry, DLQ/alarme e extensão mínima revisável do papel de deploy; nenhum recurso externo foi criado. | Gage (@devops) |
+| 2026-09-18 | 1.4 | Reconciliado o histórico de migrations já aplicado no Supabase e adicionada correção forward-only para o papel padrão de novos perfis; 265 testes SQL passaram localmente e no CI. | Dara (@data-engineer) |
+| 2026-09-18 | 1.5 | PR #30 atualizada até `17dba96`; todos os gates remotos passaram, exceto o E2E bloqueado pela versão antiga de `admin-resources` apenas no projeto `site-teste`. Produção foi confirmada em modo somente leitura como idêntica ao fonte local. | Gage (@devops) |
 
 ## Dev Agent Record
 
@@ -210,10 +212,14 @@ Codex / GPT-5
 - Banco fornece trilha append-only, RPCs transacionais, leases, limites, kill switch, controle auditado, outbox Telegram e estados de falha ambígua.
 - Worker AWS/SES e Telegram implementado com privilégio mínimo, concorrência 1, DLQ, alarmes e defaults desativados/dry-run.
 - API administrativa de status, projeções descritivas, OpenAPI, arquitetura e runbook concluídos.
-- Nenhuma chamada real a SES/Telegram, migration remota, deploy, ativação, push ou merge foi executada nesta story.
+- Nenhuma chamada real a SES/Telegram, migration remota, deploy, ativação ou merge foi executada nesta story; o push autorizado atualizou a PR #30.
 - Commit candidato de implementação: `ca426b0` (`feat(sales): add safe reactivation orchestrator`).
 - Correção do gate E2E: `31c217b` (`fix(blog): retry failed autosave safely`).
-- O gate E2E pendente da PR foi corrigido e validado localmente em modo equivalente à CI; o check remoto só poderá ser renovado após push autorizado.
+- O gate E2E do SHA `17dba96` executou 136 casos: 128 passaram, 7 foram
+  ignorados por configuração visual e somente o CRUD de blog falhou. A causa
+  comprovada é drift da Edge Function no projeto isolado: `site-teste` versão
+  16 não possui os campos/ações editoriais; a função de produção versão 70 é
+  idêntica ao fonte local. A atualização do ambiente de teste aguarda autorização.
 - O pipeline de frontend agora bloqueia publicação quando faltam secrets obrigatórios do Worker; o verificador consulta somente metadados e nunca imprime valores.
 - A inspeção read-only do Worker de produção confirmou quatro dos seis nomes exigidos e identificou `SES_EVENTS_WEBHOOK_SECRET` e `EMAIL_UNSUBSCRIBE_SECRET` como pendências de configuração.
 - A auditoria pós-claim fechou a troca silenciosa de destinatário/curso: o curso da sequência é imutável, o claim rejeita drift prévio e `sales_begin_send` compara novamente os dados capturados imediatamente antes do SES.

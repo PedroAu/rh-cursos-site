@@ -20,11 +20,20 @@ marcado quando houver evidência observável do ambiente correspondente.
 
 - [x] Mac desbloqueado e sessão AWS renovada; perfil assumido
   `rhcursos-email-deployer` validado sem expor credenciais.
-- [ ] Sessão Supabase CLI renovada para o projeto `hwpsrujkxjhmmwphqdlz`.
-- [ ] Commits locais enviados à PR #30; o branch remoto ainda está em `bfcfb9e`.
-- [ ] CI remoto executado sobre os commits atuais; o E2E vermelho ainda pertence ao código remoto antigo.
+- [x] Sessão Supabase CLI renovada; projetos de produção
+  `hwpsrujkxjhmmwphqdlz` e teste `rajjoakjkmmzcwtabuxx` inspecionados sem escrita.
+- [x] Commits locais enviados à PR #30; o branch remoto está em `17dba96`.
+- [ ] CI remoto totalmente verde no SHA atual. Static Checks, Unit Tests, Build &
+  A11y, API Docs, Performance Budgets, Secret Scanning e DB Tests passaram.
+  O único gate vermelho é o E2E: a função `admin-resources` do projeto
+  `site-teste` está na versão 16 e não contém o contrato editorial já publicado
+  em produção. A função de produção foi baixada em modo somente leitura e é
+  idêntica aos três fontes locais (`index.ts`, validação e mappers). Atualizar o
+  ambiente de teste exige autorização específica e não altera produção.
 - [ ] PR atualizada com a branch base e revisada antes do merge.
-- [ ] Migration `20260918130000_contact_import_pipeline.sql` aplicada em produção.
+- [ ] Migrations `20260918120000_sales_reactivation_orchestrator.sql`,
+  `20260918130000_contact_import_pipeline.sql` e
+  `20260918140000_fix_profile_trigger_role.sql` aplicadas em produção.
 - [ ] Secrets Cloudflare `EMAIL_UNSUBSCRIBE_SECRET` e `SES_EVENTS_WEBHOOK_SECRET` configurados.
 - [x] Identidade de domínio SES `rhcursos.com.br`, DKIM, custom MAIL FROM, SPF e
   DMARC verificados. A identidade de domínio autoriza o remetente corporativo.
