@@ -194,6 +194,7 @@ quality_gate_tools:
 | 2026-09-18 | 1.5 | PR #30 atualizada até `17dba96`; todos os gates remotos passaram, exceto o E2E bloqueado pela versão antiga de `admin-resources` apenas no projeto `site-teste`. Produção foi confirmada em modo somente leitura como idêntica ao fonte local. | Gage (@devops) |
 | 2026-09-18 | 1.6 | Com autorização específica, `admin-resources` do `site-teste` foi atualizado da versão 16 para 17 e verificado contra os três fontes locais; o E2E foi repetido e todo o pipeline da PR #30 passou. Produção permaneceu intacta. | Dara (@data-engineer) |
 | 2026-09-18 | 1.7 | Revalidado o histórico de migrations da produção em modo somente leitura; o dry-run remoto confirmou que somente as três migrations planejadas seriam aplicadas e não realizou escrita. | Dara (@data-engineer) |
+| 2026-09-18 | 1.8 | Lint remoto do schema produtivo concluído sem erros bloqueantes; dois avisos preexistentes foram isolados em funções fora do escopo das migrations de vendas. | Dara (@data-engineer) |
 
 ## Dev Agent Record
 
@@ -231,6 +232,7 @@ Codex / GPT-5
 - O gate de banco agora compara por e-mail normalizado sob lock transacional, bloqueia duplicidade ambígua, mantém auditoria sem PII, não sobrescreve cadastro existente e nunca converte base legal da planilha em permissão aprovada. O executor exige confirmação textual adicional no modo APPLY.
 - Preparação das três bases externas para o RPC: 3.990 linhas, 2.790 e-mails canônicos e 2.731 candidatos seguros; 59 conflitos de nome ficaram fora do payload, 731 organizações divergentes foram omitidas, 2.096 registros trazem histórico e 46 trazem evento terminal de bounce. A comparação produtiva ainda não foi executada.
 - O histórico remoto de produção foi revalidado e `supabase db push --linked --dry-run` confirmou como pendentes apenas `20260918120000`, `20260918130000` e `20260918140000`; nenhuma migration foi aplicada.
+- O lint remoto não encontrou erro bloqueante. Os avisos sobre `p_forma_pagamento` em `registrar_inscricao_publica` e `p_max_requests` em `rate_limit_increment` são preexistentes e essas funções não aparecem nas três migrations pendentes.
 - A unicidade operacional foi comprovada com duas sessões PostgreSQL concorrentes: o advisory lock por e-mail produziu exatamente um `CREATED` e um `EXISTING`, sem duplicar lead, segmento ou evento de permissão.
 - Ativação ainda depende de dry-run na base real, revisão de elegibilidade, ID numérico do chat privado, identidade SES, testes sintéticos e nova autorização explícita.
 

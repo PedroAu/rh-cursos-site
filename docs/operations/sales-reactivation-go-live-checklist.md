@@ -35,7 +35,9 @@ marcado quando houver evidência observável do ambiente correspondente.
   `20260918140000_fix_profile_trigger_role.sql` aplicadas em produção. O
   histórico remoto foi conferido novamente e `supabase db push --linked
   --dry-run` confirmou que somente essas três migrations seriam aplicadas;
-  nenhuma escrita foi realizada.
+  nenhuma escrita foi realizada. O lint remoto terminou sem erros bloqueantes;
+  restaram dois avisos preexistentes de parâmetros não utilizados em funções
+  não modificadas por essas migrations.
 - [ ] Secrets Cloudflare `EMAIL_UNSUBSCRIBE_SECRET` e `SES_EVENTS_WEBHOOK_SECRET` configurados.
 - [x] Identidade de domínio SES `rhcursos.com.br`, DKIM, custom MAIL FROM, SPF e
   DMARC verificados. A identidade de domínio autoriza o remetente corporativo.
