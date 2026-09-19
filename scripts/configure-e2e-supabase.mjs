@@ -90,10 +90,12 @@ const values = {
   NEXT_PUBLIC_SUPABASE_URL: targetUrl,
   SUPABASE_URL: targetUrl,
   NEXT_PUBLIC_SUPABASE_FUNCTIONS_URL: `${targetUrl}/functions/v1`,
+  SUPABASE_FUNCTIONS_URL: `${targetUrl}/functions/v1`,
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: publishableKey,
   SUPABASE_SERVICE_ROLE_KEY: serviceRoleKey,
   E2E_ALLOW_DATABASE_WRITES: "1",
   E2E_TARGET_KIND: "isolated-test",
+  E2E_LOCAL_SUPABASE: "0",
   E2E_SUPABASE_PROJECT_REF: targetRef,
   E2E_PRODUCTION_PROJECT_REF: productionRef,
 };

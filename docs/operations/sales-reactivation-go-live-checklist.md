@@ -12,8 +12,10 @@ marcado quando houver evidência observável do ambiente correspondente.
 - [x] Planejador agregado das quatro bases.
 - [x] Gate de importação service-role com `DRY_RUN` e dupla confirmação para `APPLY`.
 - [x] Concorrência real de importação: um `CREATED`, um `EXISTING`, um único lead.
-- [x] Lint, typecheck, build de produção, 916 testes unitários, 265 testes SQL,
+- [x] Lint, typecheck, build de produção, 926 testes unitários, 265 testes SQL,
   testes concorrentes, worker e OpenAPI aprovados.
+- [x] Auditoria de dependências sem vulnerabilidade crítica; Next.js atualizado
+  para 16.3.5 e Sharp consolidado em 0.35.4 antes da publicação da PR.
 - [x] Nenhuma chamada real a SES/Telegram e nenhum contato importado.
 
 ## Estado externo ainda pendente
@@ -29,7 +31,9 @@ marcado quando houver evidência observável do ambiente correspondente.
   `site-teste` foi atualizado da versão 16 para 17; os três fontes publicados
   (`index.ts`, validação e mappers) foram comparados com o repositório e o E2E
   isolado concluiu em 6m03s. Produção não foi alterada.
-- [ ] PR atualizada com a branch base e revisada antes do merge.
+- [ ] PR atualizada com a branch base e revisada antes do merge. A `main` foi
+  integrada localmente sem conflitos e os gates de pre-push passaram; a
+  publicação do novo SHA e a confirmação do CI remoto ainda estão pendentes.
 - [ ] Migrations `20260918120000_sales_reactivation_orchestrator.sql`,
   `20260918130000_contact_import_pipeline.sql` e
   `20260918140000_fix_profile_trigger_role.sql` aplicadas em produção. O
