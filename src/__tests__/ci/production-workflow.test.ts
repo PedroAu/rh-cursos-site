@@ -130,6 +130,18 @@ describe("REC-401 production delivery graph", () => {
     expect(production).not.toContain("continue-on-error");
   });
 
+  it("keeps pushes to main validation-only until an explicit production dispatch", () => {
+    const productionWorkflow = readWorkflowObject("production-pipeline.yml");
+
+    for (const jobName of ["migrate-database", "deploy-functions", "deploy-frontend"]) {
+      const job = readJob(productionWorkflow, jobName);
+      const condition = normalizeExpression(requiredString(job.if, `jobs.${jobName}.if`));
+      expect(condition).toMatch(
+        /^github\.event_name == 'workflow_dispatch' && \(.+\)$/,
+      );
+    }
+  });
+
   it("keeps write-enabled isolated E2E out of the production smoke workflow", () => {
     const productionWorkflow = readWorkflowObject("production-pipeline.yml");
     const ciWorkflow = readWorkflowObject("ci.yml");

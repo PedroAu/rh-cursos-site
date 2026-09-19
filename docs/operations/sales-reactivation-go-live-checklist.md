@@ -17,6 +17,8 @@ marcado quando houver evidência observável do ambiente correspondente.
 - [x] Auditoria de dependências sem vulnerabilidade crítica; Next.js atualizado
   para 16.3.5 e Sharp consolidado em 0.35.4 antes da publicação da PR.
 - [x] Nenhuma chamada real a SES/Telegram e nenhum contato importado.
+- [x] Push em `main` executa validação, mas migrations e deploys produtivos
+  exigem `workflow_dispatch` explícito; merge e produção permanecem gates separados.
 
 ## Estado externo ainda pendente
 

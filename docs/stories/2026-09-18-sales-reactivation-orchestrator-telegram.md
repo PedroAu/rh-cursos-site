@@ -198,6 +198,7 @@ quality_gate_tools:
 | 2026-09-18 | 1.9 | Branch sincronizada localmente com `main`; o configurador E2E agora remove referências locais obsoletas ao selecionar o Supabase isolado, com teste de regressão dedicado. | Gage (@devops) |
 | 2026-09-18 | 2.0 | Gate de dependências eliminou alerta crítico com Next.js 16.3.5 e consolidou Sharp 0.35.4 na árvore; lint, typecheck, build e 926 testes unitários foram revalidados. | Gage (@devops) |
 | 2026-09-18 | 2.1 | Seletores E2E da confirmação de inscrição passaram a usar o heading semântico, evitando ambiguidade com o anunciador de rota do Next.js 16.3.5. | Gage (@devops) |
+| 2026-09-18 | 2.2 | A pipeline produtiva passou a exigir dispatch manual para migrations e deploys, preservando a autorização separada entre merge e produção. | Gage (@devops) |
 
 ## Dev Agent Record
 
@@ -240,6 +241,7 @@ Codex / GPT-5
 - O configurador de E2E passou a sobrescrever também `SUPABASE_FUNCTIONS_URL` e `E2E_LOCAL_SUPABASE`, impedindo que uma configuração local anterior contamine a execução contra o projeto isolado; o novo teste de regressão passou.
 - A auditoria de dependências ficou sem vulnerabilidade crítica após atualizar o lockfile para Next.js 16.3.5 e consolidar Sharp 0.35.4 em toda a árvore; alertas transitivos altos/moderados permanecem registrados para tratamento separado.
 - O primeiro CI do SHA `fee5de5` passou em todos os gates exceto dois seletores E2E que encontraram, além do título real, o novo anunciador de rota do Next.js 16.3.5. Os seletores agora usam o heading semântico; ambos os casos passaram localmente contra o Supabase isolado.
+- O merge foi identificado como acoplado à pipeline produtiva sem aprovação manual. O grafo continua validando pushes em `main`, mas migrations, Functions e frontend agora exigem `workflow_dispatch`, mantendo o deploy sob autorização explícita e auditável.
 - A unicidade operacional foi comprovada com duas sessões PostgreSQL concorrentes: o advisory lock por e-mail produziu exatamente um `CREATED` e um `EXISTING`, sem duplicar lead, segmento ou evento de permissão.
 - Ativação ainda depende de dry-run na base real, revisão de elegibilidade, ID numérico do chat privado, identidade SES, testes sintéticos e nova autorização explícita.
 
@@ -247,6 +249,7 @@ Codex / GPT-5
 
 - `.env.example`
 - `.github/workflows/deploy-frontend.yml`
+- `.github/workflows/production-pipeline.yml`
 - `app/api/admin/sales/reactivation/status/route.ts`
 - `docs/ARCHITECTURE.md`
 - `docs/api/openapi.yaml`
@@ -281,6 +284,7 @@ Codex / GPT-5
 - `src/__tests__/features/sales-reactivation-core.test.ts`
 - `src/__tests__/features/sales-reactivation-status.test.ts`
 - `src/__tests__/ci/production-workflow.test.ts`
+- `src/__tests__/ci/production-migrations-workflow.test.ts`
 - `src/__tests__/scripts/check-workers-required-secrets.test.ts`
 - `src/__tests__/scripts/configure-e2e-supabase.test.ts`
 - `src/features/admin/blog/admin-blog-editor.tsx`
