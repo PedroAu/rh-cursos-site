@@ -32,7 +32,10 @@ marcado quando houver evidência observável do ambiente correspondente.
 - [ ] PR atualizada com a branch base e revisada antes do merge.
 - [ ] Migrations `20260918120000_sales_reactivation_orchestrator.sql`,
   `20260918130000_contact_import_pipeline.sql` e
-  `20260918140000_fix_profile_trigger_role.sql` aplicadas em produção.
+  `20260918140000_fix_profile_trigger_role.sql` aplicadas em produção. O
+  histórico remoto foi conferido novamente e `supabase db push --linked
+  --dry-run` confirmou que somente essas três migrations seriam aplicadas;
+  nenhuma escrita foi realizada.
 - [ ] Secrets Cloudflare `EMAIL_UNSUBSCRIBE_SECRET` e `SES_EVENTS_WEBHOOK_SECRET` configurados.
 - [x] Identidade de domínio SES `rhcursos.com.br`, DKIM, custom MAIL FROM, SPF e
   DMARC verificados. A identidade de domínio autoriza o remetente corporativo.
