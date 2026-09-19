@@ -82,7 +82,7 @@ function Stepper() {
                 className={cn(
                   "flex h-10 w-10 items-center justify-center rounded-full border text-sm font-bold",
                   active
-                    ? "border-tk-brand bg-tk-brand text-white shadow-[0_0_0_4px_var(--tk-accent-soft)]"
+                    ? "border-tk-brand bg-tk-brand text-white ring-4 ring-tk-accent-soft"
                     : "border-tk-line bg-white text-tk-ink-muted",
                 )}
                 aria-current={active ? "step" : undefined}
@@ -343,7 +343,7 @@ export function CourseCheckoutPage() {
   return (
     <section className="bg-[var(--tk-surface-2)] py-8 sm:py-10">
       <div className="mx-auto max-w-[1180px] px-4 sm:px-8 lg:px-10">
-        <div className="overflow-hidden rounded-[20px] border border-tk-line bg-white shadow-[0_30px_80px_-30px_rgba(0,0,0,0.25)]">
+        <div className="overflow-hidden rounded-tk-panel border border-tk-line bg-white shadow-tk-panel">
           <header className="border-b border-tk-line bg-[var(--tk-gradient-soft)] px-6 py-8 md:px-10">
             <div className="mx-auto max-w-[1100px]">
               <div className="mb-5 flex flex-wrap items-center gap-2 text-caption text-tk-ink-muted">
@@ -399,13 +399,13 @@ export function CourseCheckoutPage() {
                         className={cn(
                           "flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition",
                           checked
-                            ? "border-tk-brand bg-tk-accent-soft shadow-[inset_0_0_0_1px_var(--tk-brand)]"
+                            ? "border-tk-brand bg-tk-accent-soft ring-1 ring-inset ring-tk-brand"
                             : "border-tk-line bg-white hover:border-tk-accent",
                         )}
                       >
                         <span
                           className={cn(
-                            "h-4 w-4 shrink-0 rounded-full border-2 shadow-[inset_0_0_0_2.5px_var(--tk-surface)]",
+                            "h-4 w-4 shrink-0 rounded-full border-2 shadow-tk-radio-indicator",
                             checked ? "border-tk-brand bg-tk-brand" : "border-tk-line bg-white",
                           )}
                         />
@@ -435,7 +435,7 @@ export function CourseCheckoutPage() {
                   description="Não solicitamos dados financeiros nesta etapa."
                 />
 
-                <div className="mb-5 grid gap-1 rounded-[10px] border border-tk-line bg-[var(--tk-surface-2)] p-1 sm:grid-cols-3">
+                <div className="mb-5 grid gap-1 rounded-tk-icon border border-tk-line bg-[var(--tk-surface-2)] p-1 sm:grid-cols-3">
                   {APPLICANT_OPTIONS.map(({ value, label }) => (
                     <button
                       key={value}
@@ -443,7 +443,7 @@ export function CourseCheckoutPage() {
                       aria-pressed={form.applicantType === value}
                       onClick={() => updateField("applicantType", value)}
                       className={cn(
-                        "rounded-[7px] px-3 py-2.5 text-sm font-semibold transition",
+                        "rounded-tk-segment px-3 py-2.5 text-sm font-semibold transition",
                         form.applicantType === value
                           ? "bg-white text-tk-brand shadow-sm"
                           : "text-tk-ink-muted",

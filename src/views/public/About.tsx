@@ -208,7 +208,7 @@ export function AboutPage() {
             ].map((item) => (
               <Card
                 key={item.title}
-                className="rounded-[24px] border-tk-line bg-tk-surface"
+                className="rounded-tk-card border-tk-line bg-tk-surface"
               >
                 <CardContent className="p-8">
                   <h3 className="font-tk-display text-[1.5rem] font-bold tracking-[-0.02em] text-tk-brand">{item.title}</h3>
@@ -249,11 +249,11 @@ export function AboutPage() {
               return (
                 <Card
                   key={item.title}
-                  className="rounded-[24px] border-tk-line bg-tk-surface"
+                  className="rounded-tk-card border-tk-line bg-tk-surface"
                 >
                   <CardContent className="p-8">
                     <div
-                      className="flex h-11 w-11 items-center justify-center rounded-[12px] text-white"
+                      className="flex h-11 w-11 items-center justify-center rounded-tk-field-lg text-white"
                       style={{ background: item.tint }}
                     >
                       <span aria-hidden="true" className="font-tk-display text-[20px] font-bold leading-none">
@@ -291,11 +291,11 @@ export function AboutPage() {
               return (
                 <Card
                   key={track.title}
-                  className="rounded-[24px] border-tk-line bg-tk-surface"
+                  className="rounded-tk-card border-tk-line bg-tk-surface"
                 >
                   <CardContent className="flex gap-5 p-7">
                     <div
-                      className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-[14px] text-white"
+                      className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-tk-card-compact text-white"
                       style={{ background: track.tint }}
                     >
                       <Icon className="h-5 w-5" />

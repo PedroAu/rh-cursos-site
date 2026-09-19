@@ -260,7 +260,7 @@ export function BlogPage() {
         <div className="mx-auto w-[min(var(--tk-container),calc(100%-24px))] md:w-[min(var(--tk-container),calc(100%-40px))]">
           {featuredPost ? (
             <div className="grid gap-8 lg:grid-cols-[1.35fr_1fr]">
-              <Card className="overflow-hidden rounded-[24px] border-tk-line bg-tk-surface">
+              <Card className="overflow-hidden rounded-tk-card border-tk-line bg-tk-surface">
                 <div
                   className="relative flex h-[300px] items-start overflow-hidden px-8 py-7 text-white"
                   style={{ background: getPresentation(featuredPost).tint }}
@@ -289,7 +289,7 @@ export function BlogPage() {
                 </CardContent>
               </Card>
 
-              <Card className="rounded-[24px] border-tk-line bg-tk-surface">
+              <Card className="rounded-tk-card border-tk-line bg-tk-surface">
                 <CardContent className="p-7">
                   <div className="flex items-center gap-2">
                     <span className="h-2 w-2 rounded-full bg-tk-error" aria-hidden />
@@ -338,7 +338,7 @@ export function BlogPage() {
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder="Buscar por tema ou palavra-chave"
-                  className="h-12 rounded-[12px] pl-11"
+                  className="h-12 rounded-tk-field-lg pl-11"
                   aria-label="Buscar por tema ou palavra-chave"
                 />
               </div>
@@ -346,7 +346,7 @@ export function BlogPage() {
                 <button
                   type="button"
                   onClick={() => setQuery("")}
-                  className="rounded-[12px] border border-tk-line px-3 py-3 text-sm font-medium text-tk-ink-muted transition hover:border-[var(--rh-paper-line)] hover:text-tk-ink"
+                  className="rounded-tk-field-lg border border-tk-line px-3 py-3 text-sm font-medium text-tk-ink-muted transition hover:border-[var(--rh-paper-line)] hover:text-tk-ink"
                   aria-label="Limpar busca do blog"
                 >
                   Limpar
@@ -380,7 +380,7 @@ export function BlogPage() {
           {isInitialLoading ? (
             <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
               {Array.from({ length: 6 }).map((_, index) => (
-                <div key={index} className="h-[420px] animate-pulse rounded-[24px] bg-tk-surface-2" />
+                <div key={index} className="h-[420px] animate-pulse rounded-tk-card bg-tk-surface-2" />
               ))}
             </div>
           ) : filteredPosts.length ? (
@@ -391,7 +391,7 @@ export function BlogPage() {
 
                 return (
                   <Link key={post.id} to={`/blog/${post.slug}`} className="block">
-                    <Card interactive className="h-full overflow-hidden rounded-[24px] border-tk-line bg-tk-surface transition hover:-translate-y-1">
+                    <Card interactive className="h-full overflow-hidden rounded-tk-card border-tk-line bg-tk-surface transition hover:-translate-y-1">
                       <div className="relative h-[158px] px-5 py-4 text-white" style={{ background: presentation.tint }}>
                         <span className="inline-flex rounded-full bg-white/18 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.08em]">
                           {post.category}
@@ -416,7 +416,7 @@ export function BlogPage() {
             </div>
             ) : null
           ) : (
-            <Card className="rounded-[24px] border-tk-line bg-tk-surface">
+            <Card className="rounded-tk-card border-tk-line bg-tk-surface">
               <CardContent className="p-10 text-center">
                 <h3 className="font-tk-display text-[1.5rem] font-bold text-tk-ink">Nenhum artigo encontrado</h3>
                 <p className="mt-3 text-sm text-tk-ink-muted">Tente outra palavra-chave ou categoria.</p>
@@ -441,7 +441,7 @@ export function BlogPage() {
             </p>
           </div>
 
-          <Card className="rounded-[24px] border-tk-line bg-tk-surface">
+          <Card className="rounded-tk-card border-tk-line bg-tk-surface">
             <CardContent className="space-y-4 p-8">
               <Input
                 value={newsletterName}

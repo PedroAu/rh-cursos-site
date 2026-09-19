@@ -451,7 +451,7 @@ export function AgendaPage() {
                   ) : null}
                 </label>
 
-                <div className="flex h-11 flex-wrap rounded-[6px] border border-tk-line bg-tk-surface p-1">
+                <div className="flex h-11 flex-wrap rounded-tk-button border border-tk-line bg-tk-surface p-1">
                   {[
                     { label: "Todas", value: "" },
                     { label: "Online", value: "Online" },
@@ -462,7 +462,7 @@ export function AgendaPage() {
                       type="button"
                       onClick={() => setMode(option.value as "" | AgendaMode)}
                       className={cn(
-                        "rounded-[4px] px-4 text-sm font-medium text-tk-ink-muted transition",
+                        "rounded-tk-input px-4 text-sm font-medium text-tk-ink-muted transition",
                         mode === option.value && "bg-tk-brand font-semibold text-tk-surface"
                       )}
                     >
@@ -476,7 +476,7 @@ export function AgendaPage() {
                   value={area}
                   onChange={(event) => setArea(event.target.value)}
                   className={cn(
-                    "h-11 min-w-[210px] rounded-[4px] border border-tk-line bg-tk-surface px-3 text-sm text-tk-ink outline-none transition focus:border-tk-accent",
+                    "h-11 min-w-[210px] rounded-tk-input border border-tk-line bg-tk-surface px-3 text-sm text-tk-ink outline-none transition focus:border-tk-accent",
                     area && "border-tk-brand bg-tk-accent-soft font-semibold text-tk-brand"
                   )}
                 >
@@ -493,7 +493,7 @@ export function AgendaPage() {
                   value={city}
                   onChange={(event) => setCity(event.target.value)}
                   className={cn(
-                    "h-11 min-w-[210px] rounded-[4px] border border-tk-line bg-tk-surface px-3 text-sm text-tk-ink outline-none transition focus:border-tk-accent",
+                    "h-11 min-w-[210px] rounded-tk-input border border-tk-line bg-tk-surface px-3 text-sm text-tk-ink outline-none transition focus:border-tk-accent",
                     city && "border-tk-brand bg-tk-accent-soft font-semibold text-tk-brand"
                   )}
                 >
@@ -511,14 +511,14 @@ export function AgendaPage() {
                   aria-label="Ordenar agenda"
                   value={sort}
                   onChange={(event) => setSort(event.target.value as SortMode)}
-                  className="h-11 min-w-[210px] rounded-[4px] border border-tk-line bg-tk-surface px-3 text-sm text-tk-ink outline-none transition focus:border-tk-accent"
+                  className="h-11 min-w-[210px] rounded-tk-input border border-tk-line bg-tk-surface px-3 text-sm text-tk-ink outline-none transition focus:border-tk-accent"
                 >
                   <option value="data">Data · mais próxima</option>
                   <option value="preco-asc">Preço · menor primeiro</option>
                   <option value="preco-desc">Preço · maior primeiro</option>
                 </select>
 
-                <div className="flex h-11 rounded-[6px] border border-tk-line bg-tk-surface p-1">
+                <div className="flex h-11 rounded-tk-button border border-tk-line bg-tk-surface p-1">
                   {[
                     { icon: List, label: "Lista", value: "lista" },
                     { icon: CalendarDays, label: "Calendário", value: "calendario" }
@@ -531,7 +531,7 @@ export function AgendaPage() {
                         type="button"
                         onClick={() => setView(option.value as AgendaView)}
                         className={cn(
-                          "inline-flex items-center gap-2 rounded-[4px] px-4 text-sm font-medium text-tk-ink-muted transition",
+                          "inline-flex items-center gap-2 rounded-tk-input px-4 text-sm font-medium text-tk-ink-muted transition",
                           view === option.value && "bg-tk-brand text-tk-surface"
                         )}
                       >
@@ -599,14 +599,14 @@ export function AgendaPage() {
                       type="button"
                       aria-label="Mês anterior"
                       onClick={() => setCalendarDate((current) => subMonths(current, 1))}
-                      className="inline-flex h-[38px] w-[38px] items-center justify-center rounded-[6px] border border-tk-line text-tk-ink-muted transition hover:border-tk-accent hover:text-tk-accent"
+                      className="inline-flex h-[38px] w-[38px] items-center justify-center rounded-tk-button border border-tk-line text-tk-ink-muted transition hover:border-tk-accent hover:text-tk-accent"
                     >
                       <ChevronLeft className="h-4 w-4" />
                     </button>
                     <button
                       type="button"
                       onClick={() => setCalendarDate(startOfMonth(new Date()))}
-                      className="inline-flex h-[38px] items-center rounded-[6px] border border-tk-line px-4 text-sm font-medium text-tk-ink transition hover:border-tk-accent hover:text-tk-accent"
+                      className="inline-flex h-[38px] items-center rounded-tk-button border border-tk-line px-4 text-sm font-medium text-tk-ink transition hover:border-tk-accent hover:text-tk-accent"
                     >
                       Hoje
                     </button>
@@ -614,7 +614,7 @@ export function AgendaPage() {
                       type="button"
                       aria-label="Próximo mês"
                       onClick={() => setCalendarDate((current) => addMonths(current, 1))}
-                      className="inline-flex h-[38px] w-[38px] items-center justify-center rounded-[6px] border border-tk-line text-tk-ink-muted transition hover:border-tk-accent hover:text-tk-accent"
+                      className="inline-flex h-[38px] w-[38px] items-center justify-center rounded-tk-button border border-tk-line text-tk-ink-muted transition hover:border-tk-accent hover:text-tk-accent"
                     >
                       <ChevronRight className="h-4 w-4" />
                     </button>
@@ -646,7 +646,7 @@ export function AgendaPage() {
                           "flex min-h-[104px] flex-col gap-1 rounded-xl border p-[10px]",
                           !inMonth && "border-dashed border-tk-line bg-tk-surface-2",
                           inMonth && !entry && "border-tk-line bg-tk-surface",
-                          inMonth && entry && "border-tk-accent bg-tk-surface shadow-[inset_0_0_0_1px_var(--tk-accent-soft)]"
+                          inMonth && entry && "border-tk-accent bg-tk-surface ring-1 ring-inset ring-tk-accent-soft"
                         )}
                       >
                         <span className={cn("text-sm font-semibold", entry ? "text-tk-accent-strong" : "text-tk-ink-muted")}>
@@ -685,7 +685,7 @@ export function AgendaPage() {
                           key={entry.trainingClass.id}
                           interactive
                           variant="glass"
-                          className="grid gap-5 rounded-[24px] px-6 py-5 md:grid-cols-[96px_minmax(0,1fr)] lg:grid-cols-[96px_minmax(0,1fr)_170px] lg:items-center lg:gap-[26px]"
+                          className="grid gap-5 rounded-tk-card px-6 py-5 md:grid-cols-[96px_minmax(0,1fr)] lg:grid-cols-[96px_minmax(0,1fr)_170px] lg:items-center lg:gap-[26px]"
                         >
                           <div className="border-b border-tk-line pb-4 text-center md:border-b-0 md:border-r md:pb-0 md:pr-5">
                             <div className="font-tk-display text-[34px] font-bold leading-none tracking-[-0.02em] text-tk-accent-strong">
@@ -770,7 +770,7 @@ export function AgendaPage() {
 
       <section className="bg-tk-surface-2 pb-14">
         <div className="mx-auto max-w-[1200px] px-4 sm:px-6 xl:px-10">
-          <Card variant="base" className="rounded-[24px] border-[var(--rh-paper-line)] bg-[linear-gradient(158deg,var(--rh-paper-a),var(--rh-paper-b))] px-8 py-10 md:flex md:items-center md:justify-between md:gap-8">
+          <Card variant="base" className="rounded-tk-card border-[var(--rh-paper-line)] bg-[linear-gradient(158deg,var(--rh-paper-a),var(--rh-paper-b))] px-8 py-10 md:flex md:items-center md:justify-between md:gap-8">
             <div className="max-w-[620px]">
               <h2 className="font-tk-display text-[2rem] font-bold leading-tight text-tk-ink">
                 Nenhuma data serve para a sua equipe?

@@ -107,13 +107,13 @@
 
       "status": {
         "success": {
-          "$value": "#22c55e"
+          "$value": "#068466"
         },
         "warning": {
           "$value": "#eab308"
         },
         "error": {
-          "$value": "#dc2626"
+          "$value": "#ea384c"
         }
       }
     },

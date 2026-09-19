@@ -92,6 +92,12 @@
   --tk-radius-glass: 16px;
   --tk-radius-card: 24px;
   --tk-radius-pill: 100rem;
+  /* Exact consumer aliases; additive only, so no existing consumer changes. */
+  --tk-radius-segment: 7px;
+  --tk-radius-icon: 10px;
+  --tk-radius-field-lg: 12px;
+  --tk-radius-card-compact: 14px;
+  --tk-radius-panel: 20px;
   --tk-container: 1200px;
   --tk-container-wide: 1400px;
 
@@ -100,6 +106,11 @@
   --tk-shadow-glass: 0 4px 16px rgba(0,0,0,0.08);
   --tk-shadow-card: 0 2px 16px rgba(0,0,0,0.02), 0 16px 64px rgba(0,0,0,0.12);
   --tk-shadow-pop: 0 12px 36px -8px rgba(41,43,78,0.18);
+  --tk-shadow-panel: 0 30px 80px -30px rgba(0,0,0,0.25);
+  --tk-shadow-lifted: 0 8px 30px -20px rgba(0,0,0,0.3);
+  --tk-shadow-avatar: 0 8px 20px -10px rgba(0,0,0,0.25);
+  --tk-shadow-media-control: 0 12px 30px -12px rgba(0,0,0,0.4);
+  --tk-shadow-radio-indicator: inset 0 0 0 2.5px var(--tk-surface);
   --tk-focus-ring: 0.125rem solid var(--tk-focus);
   --tk-focus-offset: 0.125rem;
   --tk-ease: cubic-bezier(0.25, 0.46, 0.45, 0.94);
