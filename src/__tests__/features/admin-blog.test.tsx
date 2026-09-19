@@ -37,7 +37,8 @@ afterEach(() => vi.useRealTimers());
 describe("Gestão do blog em páginas separadas", () => {
   it("mostra apenas o acervo com links próprios de criação e edição", () => {
     render(<AdminBlogPage />);
-    expect(screen.getByRole("link", { name: "Novo artigo" })).toHaveAttribute("href", "/admin/blog/novo");
+    fireEvent.click(screen.getByRole("button", { name: "Novo post" }));
+    expect(mocks.push).toHaveBeenCalledWith("/admin/blog/novo");
     expect(screen.getByRole("link", { name: `Editar ${post.title}` })).toHaveAttribute("href", "/admin/blog/post-1/editar");
     expect(screen.queryByLabelText("Conteúdo")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Salvar" })).not.toBeInTheDocument();
@@ -75,6 +76,30 @@ describe("Gestão do blog em páginas separadas", () => {
     await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Falha de conexão"));
     expect(mocks.push).not.toHaveBeenCalled();
     expect(screen.getByLabelText("Título")).toHaveValue("Título pendente");
+  });
+
+  it("repete manualmente um autosave falho com o mesmo ID idempotente", async () => {
+    vi.useFakeTimers();
+    mocks.saveBlogDraft
+      .mockRejectedValueOnce(new Error("Falha transitória"))
+      .mockImplementationOnce(async (draft: Partial<BlogPost>) => draft.id);
+
+    render(<AdminBlogEditor />);
+    fireEvent.change(screen.getByLabelText("Título"), { target: { value: "Novo rascunho idempotente" } });
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(1600); });
+    expect(mocks.saveBlogDraft).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("alert")).toHaveTextContent("Não foi possível salvar automaticamente");
+
+    fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
+    await act(async () => { await Promise.resolve(); });
+
+    expect(mocks.saveBlogDraft).toHaveBeenCalledTimes(2);
+    const firstId = mocks.saveBlogDraft.mock.calls[0]?.[0]?.id;
+    const secondId = mocks.saveBlogDraft.mock.calls[1]?.[0]?.id;
+    expect(firstId).toMatch(/^post-[0-9a-f-]{36}$/);
+    expect(secondId).toBe(firstId);
+    expect(mocks.push).toHaveBeenCalledWith(`/admin/blog/${firstId}/editar`);
   });
 
   it("retorna ao acervo sem criar um artigo vazio", () => {

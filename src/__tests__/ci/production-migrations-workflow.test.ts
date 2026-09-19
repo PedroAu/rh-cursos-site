@@ -179,6 +179,7 @@ describe("REC-402 mandatory production migrations", () => {
     expect(changes).toContain('\"$EVENT_NAME\" == \"workflow_dispatch\"');
 
     expect(migrate).toContain("needs: [changes, ci]");
+    expect(migrate).toContain("github.event_name == 'workflow_dispatch'");
     expect(migrate).toContain("needs.ci.result == 'success'");
     expect(migrate).toContain("needs.changes.outputs.database == 'true'");
     expect(migrate).not.toContain("needs.changes.outputs.functions == 'true'");
@@ -230,11 +231,13 @@ describe("REC-402 mandatory production migrations", () => {
     const frontend = readNestedBlock(production, "deploy-frontend", 2);
 
     expect(functions).toContain("needs: [changes, ci, migrate-database]");
+    expect(functions).toContain("github.event_name == 'workflow_dispatch'");
     expect(functions).toContain("needs.migrate-database.result == 'success'");
     expect(functions).toContain("needs.migrate-database.result == 'skipped'");
     expect(functions).toContain("needs.changes.outputs.database == 'false'");
 
     expect(frontend).toContain("needs: [changes, ci, migrate-database, deploy-functions]");
+    expect(frontend).toContain("github.event_name == 'workflow_dispatch'");
     expect(frontend).toContain("needs.migrate-database.result == 'success'");
     expect(frontend).toContain("needs.migrate-database.result == 'skipped'");
     expect(frontend).toContain("needs.changes.outputs.functions == 'true'");

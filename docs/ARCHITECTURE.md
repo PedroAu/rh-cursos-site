@@ -694,6 +694,31 @@ CDN distribution (global)
 
 ---
 
+### Sales reactivation worker
+
+The sales reactivation path is intentionally split across the existing
+platform boundaries:
+
+- Cloudflare/Next.js exposes only the protected administrative status read model.
+- Supabase remains the system of record for contact permission, policy decisions,
+  campaign versions, sequence claims, send attempts, suppression and notification outbox.
+- External contact bases enter through a service-role-only import gate. Dry-run
+  persists only hashed audit decisions; apply is idempotent, preserves existing
+  PII, stores the `GESTAO_DE_PESSOAS` segment separately, records imported legal
+  basis as `UNKNOWN`, and incorporates dated source history into inactivity checks.
+- An EventBridge-scheduled Lambda performs bounded orchestration and calls Amazon
+  SES and the allowlisted private Telegram chat.
+- Locaweb remains the corporate reply inbox; the existing IMAP collector feeds
+  replies back into the same append-only interaction timeline.
+
+The stack is fail-closed at every layer: the schedule defaults to disabled, the
+worker defaults to dry-run, the database defaults to disabled plus global kill
+switch, and campaign content defaults to draft. Production activation is a
+separate, explicitly approved operation. See
+[`docs/operations/sales-reactivation-orchestrator.md`](operations/sales-reactivation-orchestrator.md).
+
+---
+
 ## 13. Glossary & Key Terms
 
 | Term | Definition |

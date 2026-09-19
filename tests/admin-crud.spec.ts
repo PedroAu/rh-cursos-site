@@ -686,36 +686,57 @@ test.describe("admin CRUD — ciclo completo criar → salvar → excluir", () =
   });
 
   test("blog: cria respeitando os tamanhos mínimos de resumo/conteúdo e exclui", async ({ page }) => {
+    test.setTimeout(75_000);
     const title = `${MARKER} post ${Date.now()}`;
     await page.goto("/admin/blog");
 
-    const dialog = await openCreateDialog(page);
-    await fillText(dialog, "Título", title);
-    await fillSelectByIndex(dialog, "Categoria");
-    await fillText(dialog, "Autor", "Equipe E2E");
-    await fillSelectByIndex(dialog, "Status");
-    await fillText(dialog, "Resumo", "Resumo de teste com mais de vinte caracteres.");
-    await fillText(
-      dialog,
-      "Conteúdo",
+    await page.getByRole("button", { name: "Novo post" }).click();
+    await expect(page).toHaveURL(/\/admin\/blog\/novo$/);
+    const editor = page.locator("main");
+    await editor.getByRole("textbox", { name: "Título", exact: true }).fill(title);
+    await fillSelectByIndex(editor, "Categoria");
+    await editor.getByRole("textbox", { name: "Autor", exact: true }).fill("Equipe E2E");
+    await editor.getByRole("textbox", { name: /^Resumo/ }).fill("Resumo de teste com mais de vinte caracteres.");
+    await editor.getByRole("textbox", { name: "Conteúdo", exact: true }).fill(
       "Conteúdo de teste gerado pelo spec admin-crud.spec.ts. Precisa ter pelo menos cem caracteres " +
         "para passar na validação de admin-form-validation.ts, então este parágrafo é propositalmente longo."
     );
 
-    await dialog.getByRole("button", { name: /Criar registro|Salvar alterações/ }).click();
-    await expect
-      .poll(
-        async () => {
-          const created = await findBlogPostByTitle(title);
-          return created ?? null;
-        },
-        { timeout: 30_000, intervals: [250, 500, 1_000] }
-      )
-      .not.toBeNull();
+    const saveResponsePromise = page.waitForResponse(
+      (response) => {
+        const request = response.request();
+        if (request.method() !== "POST" || !response.url().includes("/api/functions/admin-resources")) {
+          return false;
+        }
+        try {
+          const body = request.postDataJSON() as { resource?: string; action?: string };
+          return body.resource === "blog" && body.action === "save-draft";
+        } catch {
+          return false;
+        }
+      },
+      { timeout: 45_000 }
+    );
+
+    await editor.getByRole("button", { name: "Salvar" }).click();
+    const saveResponse = await saveResponsePromise;
+    const saveBody = (await saveResponse.json().catch(() => null)) as {
+      ok?: unknown;
+      data?: { id?: unknown };
+      error?: unknown;
+    } | null;
+    if (!saveResponse.ok() || saveBody?.ok !== true) {
+      throw new Error(
+        `admin-resources falhou ao salvar blog; HTTP ${saveResponse.status()}; erro=${String(saveBody?.error ?? "desconhecido")}`
+      );
+    }
+    const savedId = typeof saveBody.data?.id === "string" ? saveBody.data.id.trim() : "";
+    expect(savedId).not.toHaveLength(0);
+    await expect(page).toHaveURL(new RegExp(`/admin/blog/${savedId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/editar$`));
 
     const created = await findBlogPostByTitle(title);
-    expect(created?.id).toBeTruthy();
-    await deleteBlogPostById(created!.id);
+    expect(created?.id).toBe(savedId);
+    await deleteBlogPostById(savedId);
   });
 
   test("leads: cria manualmente no admin e exclui", async ({ page }) => {

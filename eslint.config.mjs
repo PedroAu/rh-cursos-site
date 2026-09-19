@@ -37,7 +37,7 @@ const eslintConfig = [
   ...nextCoreWebVitals,
   ...nextTypescript,
   {
-    ignores: ["coverage/**", "dist/**"]
+    ignores: ["coverage/**", "dist/**", "**/dist/**"]
   },
   {
     plugins: { "jsx-a11y": jsxA11yPlugin },

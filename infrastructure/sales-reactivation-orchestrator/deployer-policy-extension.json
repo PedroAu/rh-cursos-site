@@ -1,0 +1,48 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ManageRhCursosTransactionalSesConfigurationSet",
+      "Effect": "Allow",
+      "Action": [
+        "ses:CreateConfigurationSet",
+        "ses:DeleteConfigurationSet",
+        "ses:GetConfigurationSet",
+        "ses:CreateConfigurationSetEventDestination",
+        "ses:DeleteConfigurationSetEventDestination",
+        "ses:GetConfigurationSetEventDestinations",
+        "ses:UpdateConfigurationSetEventDestination"
+      ],
+      "Resource": "arn:aws:ses:sa-east-1:620444453976:configuration-set/rh-cursos-transactional"
+    },
+    {
+      "Sid": "ReadSesConfigurationSetInventory",
+      "Effect": "Allow",
+      "Action": "ses:ListConfigurationSets",
+      "Resource": "*"
+    },
+    {
+      "Sid": "CreateApiDestinationServiceLinkedRole",
+      "Effect": "Allow",
+      "Action": "iam:CreateServiceLinkedRole",
+      "Resource": "arn:aws:iam::620444453976:role/aws-service-role/apidestinations.events.amazonaws.com/AWSServiceRoleForAmazonEventBridgeApiDestinations",
+      "Condition": {
+        "StringEquals": {
+          "iam:AWSServiceName": "apidestinations.events.amazonaws.com"
+        }
+      }
+    },
+    {
+      "Sid": "ManageEventBridgeConnectionSecrets",
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:CreateSecret",
+        "secretsmanager:UpdateSecret",
+        "secretsmanager:DeleteSecret",
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:PutSecretValue"
+      ],
+      "Resource": "arn:aws:secretsmanager:sa-east-1:620444453976:secret:events!connection/*"
+    }
+  ]
+}

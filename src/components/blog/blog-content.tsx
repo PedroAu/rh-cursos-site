@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Image from "next/image";
 
 import { isSafeUrl } from "@/lib/security/sanitize";
 import { cn } from "@/lib/utils";
@@ -50,7 +51,17 @@ function renderInline(value: string, keyPrefix: string): ReactNode[] {
       return <a key={key} href={node.url} className="font-semibold text-tk-accent-strong underline underline-offset-4">{node.value}</a>;
     }
     if (node.kind === "image" && node.url && isSafeUrl(node.url)) {
-      return <img key={key} src={node.url} alt={node.value} className="my-5 max-h-[30rem] w-full rounded-2xl object-cover" loading="lazy" />;
+      return (
+        <Image
+          key={key}
+          src={node.url}
+          alt={node.value}
+          width={1200}
+          height={630}
+          className="my-5 max-h-[30rem] w-full rounded-2xl object-cover"
+          unoptimized
+        />
+      );
     }
     return <span key={key}>{node.value}</span>;
   });

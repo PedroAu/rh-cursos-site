@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowUpRight, FileText, Plus, Search } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -22,8 +23,10 @@ function statusTone(status: BlogStatus): "success" | "warning" | "muted" | "dang
 
 export function AdminBlogPage() {
   const { blogPosts } = useAdminStore();
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<BlogStatus | "Todos">("Todos");
+  const publishedPosts = blogPosts.filter((post) => post.status === "Publicado").length;
   const filteredPosts = useMemo(() => {
     const normalized = search.trim().toLocaleLowerCase("pt-BR");
     return blogPosts.filter((post) =>
@@ -38,10 +41,12 @@ export function AdminBlogPage() {
       <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-sm font-bold uppercase tracking-[0.16em] text-tk-accent-strong">Conteúdo editorial</p>
-          <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-tk-brand">Gestão do blog</h1>
-          <p className="mt-3 text-base leading-7 text-tk-ink-muted">Organize seus artigos e acompanhe cada etapa da publicação.</p>
+          <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-tk-brand">Blog</h1>
+          <p className="mt-3 text-base leading-7 text-tk-ink-muted">
+            {blogPosts.length} {blogPosts.length === 1 ? "post" : "posts"} no acervo · {publishedPosts} {publishedPosts === 1 ? "publicado" : "publicados"} no site
+          </p>
         </div>
-        <Button asChild className="self-start"><Link href="/admin/blog/novo"><Plus className="h-4 w-4" /> Novo artigo</Link></Button>
+        <Button className="self-start" onClick={() => router.push("/admin/blog/novo")}><Plus className="h-4 w-4" /> Novo post</Button>
       </header>
 
       <Card>
@@ -51,7 +56,7 @@ export function AdminBlogPage() {
             <p className="text-sm text-tk-ink-muted" role="status">{filteredPosts.length} de {blogPosts.length} artigos</p>
           </div>
           <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_220px]">
-            <Input label="Buscar artigos" placeholder="Título, autor ou categoria" value={search} onChange={(event) => setSearch(event.target.value)} />
+            <Input label="Buscar registros" placeholder="Título, autor ou categoria" value={search} onChange={(event) => setSearch(event.target.value)} />
             <label className="grid gap-2 text-sm font-medium text-tk-ink">
               Status
               <select className="h-11 rounded-tk-input border border-tk-line bg-tk-surface px-4 text-sm" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as BlogStatus | "Todos")}>

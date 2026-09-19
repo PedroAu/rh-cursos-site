@@ -130,6 +130,18 @@ describe("REC-401 production delivery graph", () => {
     expect(production).not.toContain("continue-on-error");
   });
 
+  it("keeps pushes to main validation-only until an explicit production dispatch", () => {
+    const productionWorkflow = readWorkflowObject("production-pipeline.yml");
+
+    for (const jobName of ["migrate-database", "deploy-functions", "deploy-frontend"]) {
+      const job = readJob(productionWorkflow, jobName);
+      const condition = normalizeExpression(requiredString(job.if, `jobs.${jobName}.if`));
+      expect(condition).toMatch(
+        /^github\.event_name == 'workflow_dispatch' && \(.+\)$/,
+      );
+    }
+  });
+
   it("keeps write-enabled isolated E2E out of the production smoke workflow", () => {
     const productionWorkflow = readWorkflowObject("production-pipeline.yml");
     const ciWorkflow = readWorkflowObject("ci.yml");
@@ -237,5 +249,17 @@ describe("REC-401 production delivery graph", () => {
     for (const reference of references) {
       expect(reference).toMatch(/@[a-f0-9]{40}$/);
     }
+  });
+
+  it("blocks the frontend deploy when required Worker secrets are absent", () => {
+    expect(deployFrontend).toContain("- name: Validate required Worker secrets");
+    expect(deployFrontend).toContain("run: npm run check:workers:secrets");
+    expect(deployFrontend).toContain("CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}");
+    expect(deployFrontend).toContain("CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}");
+
+    const preflightPosition = deployFrontend.indexOf("run: npm run check:workers:secrets");
+    const deployPosition = deployFrontend.indexOf("run: npm run deploy:workers");
+    expect(preflightPosition).toBeGreaterThan(-1);
+    expect(deployPosition).toBeGreaterThan(preflightPosition);
   });
 });
