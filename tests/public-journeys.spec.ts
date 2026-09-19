@@ -148,7 +148,12 @@ test.describe("epica 4 — jornadas publicas", () => {
 
       await expect(page).toHaveURL(/\/inscricao-confirmada/);
       await expect(page.getByText("Pré-inscrição recebida")).toBeVisible();
-      await expect(page.getByText("Sua solicitação está pendente de análise.")).toBeVisible();
+      await expect(
+        page.getByRole("heading", {
+          name: "Sua solicitação está pendente de análise.",
+          exact: true,
+        })
+      ).toBeVisible();
       await expect(page.getByText("Referência", { exact: true })).toBeVisible();
       expect(page.url()).not.toContain(enrollmentEmail);
     } finally {

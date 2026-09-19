@@ -74,7 +74,12 @@ test.describe("pré-inscrição pública — contrato verdadeiro", () => {
 
       await expect(page).toHaveURL(/\/inscricao-confirmada$/);
       await expect(page.getByText("Pré-inscrição recebida")).toBeVisible();
-      await expect(page.getByText("Sua solicitação está pendente de análise.")).toBeVisible();
+      await expect(
+        page.getByRole("heading", {
+          name: "Sua solicitação está pendente de análise.",
+          exact: true,
+        })
+      ).toBeVisible();
       expect(page.url()).not.toContain(enrollmentEmail);
       expect(page.url()).not.toContain(enrollmentCpf);
 

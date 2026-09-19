@@ -197,6 +197,7 @@ quality_gate_tools:
 | 2026-09-18 | 1.8 | Lint remoto do schema produtivo concluído sem erros bloqueantes; dois avisos preexistentes foram isolados em funções fora do escopo das migrations de vendas. | Dara (@data-engineer) |
 | 2026-09-18 | 1.9 | Branch sincronizada localmente com `main`; o configurador E2E agora remove referências locais obsoletas ao selecionar o Supabase isolado, com teste de regressão dedicado. | Gage (@devops) |
 | 2026-09-18 | 2.0 | Gate de dependências eliminou alerta crítico com Next.js 16.3.5 e consolidou Sharp 0.35.4 na árvore; lint, typecheck, build e 926 testes unitários foram revalidados. | Gage (@devops) |
+| 2026-09-18 | 2.1 | Seletores E2E da confirmação de inscrição passaram a usar o heading semântico, evitando ambiguidade com o anunciador de rota do Next.js 16.3.5. | Gage (@devops) |
 
 ## Dev Agent Record
 
@@ -238,6 +239,7 @@ Codex / GPT-5
 - Após integrar `main`, o pre-push aprovou lint, typecheck, build descartável, 926 testes unitários, 265 testes SQL, os dois workers e 130 casos funcionais no modo CI; oito snapshots macOS foram ignorados conforme a política do pipeline. Um timeout remoto de pré-inscrição passou ao ser repetido isoladamente em 8,1s.
 - O configurador de E2E passou a sobrescrever também `SUPABASE_FUNCTIONS_URL` e `E2E_LOCAL_SUPABASE`, impedindo que uma configuração local anterior contamine a execução contra o projeto isolado; o novo teste de regressão passou.
 - A auditoria de dependências ficou sem vulnerabilidade crítica após atualizar o lockfile para Next.js 16.3.5 e consolidar Sharp 0.35.4 em toda a árvore; alertas transitivos altos/moderados permanecem registrados para tratamento separado.
+- O primeiro CI do SHA `fee5de5` passou em todos os gates exceto dois seletores E2E que encontraram, além do título real, o novo anunciador de rota do Next.js 16.3.5. Os seletores agora usam o heading semântico; ambos os casos passaram localmente contra o Supabase isolado.
 - A unicidade operacional foi comprovada com duas sessões PostgreSQL concorrentes: o advisory lock por e-mail produziu exatamente um `CREATED` e um `EXISTING`, sem duplicar lead, segmento ou evento de permissão.
 - Ativação ainda depende de dry-run na base real, revisão de elegibilidade, ID numérico do chat privado, identidade SES, testes sintéticos e nova autorização explícita.
 
@@ -290,6 +292,8 @@ Codex / GPT-5
 - `supabase/tests/database/sales-reactivation-orchestrator.test.sql`
 - `supabase/tests/database/contact-import-pipeline.test.sql`
 - `tests/admin-crud.spec.ts`
+- `tests/checkout.e2e.spec.ts`
+- `tests/public-journeys.spec.ts`
 
 ## QA Results
 
