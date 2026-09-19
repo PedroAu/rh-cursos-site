@@ -23,13 +23,12 @@ marcado quando houver evidência observável do ambiente correspondente.
 - [x] Sessão Supabase CLI renovada; projetos de produção
   `hwpsrujkxjhmmwphqdlz` e teste `rajjoakjkmmzcwtabuxx` inspecionados sem escrita.
 - [x] Commits locais enviados à PR #30; o branch remoto está em `17dba96`.
-- [ ] CI remoto totalmente verde no SHA atual. Static Checks, Unit Tests, Build &
-  A11y, API Docs, Performance Budgets, Secret Scanning e DB Tests passaram.
-  O único gate vermelho é o E2E: a função `admin-resources` do projeto
-  `site-teste` está na versão 16 e não contém o contrato editorial já publicado
-  em produção. A função de produção foi baixada em modo somente leitura e é
-  idêntica aos três fontes locais (`index.ts`, validação e mappers). Atualizar o
-  ambiente de teste exige autorização específica e não altera produção.
+- [x] CI remoto totalmente verde no SHA `17dba96`: Static Checks, Unit Tests,
+  Build & A11y, API Docs, Performance Budgets, Secret Scanning, DB Tests e E2E
+  passaram. Com autorização específica, `admin-resources` do projeto
+  `site-teste` foi atualizado da versão 16 para 17; os três fontes publicados
+  (`index.ts`, validação e mappers) foram comparados com o repositório e o E2E
+  isolado concluiu em 6m03s. Produção não foi alterada.
 - [ ] PR atualizada com a branch base e revisada antes do merge.
 - [ ] Migrations `20260918120000_sales_reactivation_orchestrator.sql`,
   `20260918130000_contact_import_pipeline.sql` e
