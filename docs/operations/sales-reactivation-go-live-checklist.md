@@ -12,12 +12,13 @@ marcado quando houver evidência observável do ambiente correspondente.
 - [x] Planejador agregado das quatro bases.
 - [x] Gate de importação service-role com `DRY_RUN` e dupla confirmação para `APPLY`.
 - [x] Concorrência real de importação: um `CREATED`, um `EXISTING`, um único lead.
-- [x] Lint, typecheck, build de produção, 926 testes unitários, 265 testes SQL,
+- [x] Lint, typecheck, build de produção, 927 testes unitários, 266 testes SQL,
   testes concorrentes, worker e OpenAPI aprovados.
 - [x] Auditoria de dependências sem vulnerabilidade crítica; Next.js atualizado
   para 16.3.5 e Sharp consolidado em 0.35.4 antes da publicação da PR.
-- [x] Teste real do Telegram entregue no chat privado autorizado; nenhum envio
-  real pelo SES ocorreu durante a preparação.
+- [x] Teste real do Telegram entregue no chat privado autorizado; o SES aceitou
+  uma única mensagem técnica destinada ao próprio `pedro@rhcursos.com.br` e
+  nenhum contato importado recebeu envio.
 - [x] Push em `main` executa validação, mas migrations e deploys produtivos
   exigem `workflow_dispatch` explícito; merge e produção permanecem gates separados.
 
@@ -82,9 +83,9 @@ marcado quando houver evidência observável do ambiente correspondente.
   aplicada após o dry-run revelar 46 alertas indevidos de bounces históricos;
   timeline e supressões foram preservadas, a outbox histórica foi limpa e o
   teste de regressão passou na suíte de 266 testes de banco.
-- [ ] Entrega real na inbox e reply Locaweb. O teste pelo worker foi bloqueado
-  corretamente fora da janela 08h–18h; nenhum e-mail saiu e o schedule continua
-  `DISABLED`.
+- [ ] Confirmação da entrega na inbox e do reply Locaweb. O SES aceitou uma
+  mensagem técnica ao endereço corporativo, mas o teste pelo worker foi bloqueado
+  corretamente fora da janela 08h–18h; o schedule continua `DISABLED`.
 - [ ] Primeiro lote real explicitamente aprovado; schedule permanece desligado até a conferência.
 
 ## Ordem obrigatória e autorização vigente
