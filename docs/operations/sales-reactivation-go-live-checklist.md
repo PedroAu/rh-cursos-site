@@ -1,6 +1,6 @@
 # Checklist de go-live — time autônomo de vendas
 
-Atualizado em 18/09/2026. Este documento é operacional: um item só pode ser
+Atualizado em 19/09/2026. Este documento é operacional: um item só pode ser
 marcado quando houver evidência observável do ambiente correspondente.
 
 ## Estado preparado localmente
@@ -16,7 +16,8 @@ marcado quando houver evidência observável do ambiente correspondente.
   testes concorrentes, worker e OpenAPI aprovados.
 - [x] Auditoria de dependências sem vulnerabilidade crítica; Next.js atualizado
   para 16.3.5 e Sharp consolidado em 0.35.4 antes da publicação da PR.
-- [x] Nenhuma chamada real a SES/Telegram e nenhum contato importado.
+- [x] Teste real do Telegram entregue no chat privado autorizado; nenhum envio
+  real pelo SES ocorreu durante a preparação.
 - [x] Push em `main` executa validação, mas migrations e deploys produtivos
   exigem `workflow_dispatch` explícito; merge e produção permanecem gates separados.
 
@@ -33,61 +34,73 @@ marcado quando houver evidência observável do ambiente correspondente.
   `site-teste` foi atualizado da versão 16 para 17; os três fontes publicados
   (`index.ts`, validação e mappers) foram comparados com o repositório e o E2E
   isolado concluiu em 6m03s. Produção não foi alterada.
-- [ ] PR atualizada com a branch base e revisada antes do merge. A `main` foi
-  integrada localmente sem conflitos e os gates de pre-push passaram; a
-  publicação do novo SHA e a confirmação do CI remoto ainda estão pendentes.
-- [ ] Migrations `20260918120000_sales_reactivation_orchestrator.sql`,
+- [x] PR #30 revisada, com todos os gates verdes, mesclada em `main` no commit
+  `7182873d22f5c514d998eddfc968e075e21a6fea`; pipeline pós-merge concluído.
+- [x] Migrations `20260918120000_sales_reactivation_orchestrator.sql`,
   `20260918130000_contact_import_pipeline.sql` e
-  `20260918140000_fix_profile_trigger_role.sql` aplicadas em produção. O
-  histórico remoto foi conferido novamente e `supabase db push --linked
-  --dry-run` confirmou que somente essas três migrations seriam aplicadas;
-  nenhuma escrita foi realizada. O lint remoto terminou sem erros bloqueantes;
-  restaram dois avisos preexistentes de parâmetros não utilizados em funções
-  não modificadas por essas migrations.
-- [ ] Secrets Cloudflare `EMAIL_UNSUBSCRIBE_SECRET` e `SES_EVENTS_WEBHOOK_SECRET` configurados.
+  `20260918140000_fix_profile_trigger_role.sql` aplicadas em produção e
+  confirmadas no histórico remoto.
+- [x] Secrets Cloudflare `EMAIL_UNSUBSCRIBE_SECRET` e
+  `SES_EVENTS_WEBHOOK_SECRET` rotacionados e sincronizados com o segredo do
+  orquestrador no AWS Secrets Manager; webhook autenticado respondeu `422` ao
+  payload sintético inválido, comprovando autenticação sem gravar evento.
 - [x] Identidade de domínio SES `rhcursos.com.br`, DKIM, custom MAIL FROM, SPF e
   DMARC verificados. A identidade de domínio autoriza o remetente corporativo.
-- [ ] Conta SES fora do sandbox. A reconsideração do acesso à produção foi
-  enviada à AWS em 18/09/2026 e aguarda resposta; o limite atual permanece 200/dia
-  e 1/segundo.
+- [ ] Conta SES fora do sandbox. A reconsideração do caso `178957960700508` foi
+  enviada à AWS em 18/09/2026 e aguarda resposta; o estado autoritativo ainda é
+  `ProductionAccessEnabled=false`, com limite de 200/dia e 1/segundo.
 - [x] Estado atual do Configuration Set inspecionado: `rhub-email-events` publica
   via SNS para um endpoint Vercel legado.
-- [x] Novo caminho SES → EventBridge → API Destination → Cloudflare versionado
-  no template, com autenticação, filtro por identidade/remetente/configuração,
-  retry, DLQ e alarme; implantação continua pendente.
-- [ ] Extensão mínima de permissão do papel `rhcursos-email-deployer` aplicada.
-  A inspeção confirmou que o service-linked role da API Destination ainda não
-  existe; a política revisável está em
-  `infrastructure/sales-reactivation-orchestrator/deployer-policy-extension.json`
-  e não foi aplicada sem autorização específica.
-- [ ] ID numérico do chat privado do Telegram confirmado; `@rhcursos_bot` não substitui o chat ID.
-- [ ] Stack AWS implantada com schedule `DISABLED`, `RunMode=DRY_RUN` e allowlist de chat segura.
-- [ ] Dry-run produtivo da importação das três bases externas concluído e revisado.
-- [ ] `APPLY` da importação explicitamente aprovado e executado, se o dry-run for aceito.
-- [ ] Dry-run do orquestrador sobre o CRM real revisado por reason code.
-- [ ] Contato sintético validou inbox, reply Locaweb, descadastro, bounce e Telegram.
+- [x] Novo caminho SES → EventBridge → API Destination → Cloudflare implantado,
+  autenticado e filtrado por identidade, remetente e Configuration Set; DLQs
+  vazias, conexão `AUTHORIZED`, destino `ACTIVE` e alarmes `OK`.
+- [x] Extensão mínima do papel `rhcursos-email-deployer` aplicada e versionada,
+  incluindo tags do Configuration Set e leituras necessárias aos gates SES.
+- [x] ID numérico do chat privado confirmado e teste entregue pelo
+  `@rhcursos_bot` sem expor token.
+- [x] Stack `rhcursos-email-sales-reactivation` implantada com schedule
+  `DISABLED`, `RunMode=DRY_RUN`, lote 5 e allowlist de chat `0`.
+- [x] Coletor Locaweb IMAP confirmado saudável a cada minuto, com checkpoint
+  preservado no UID 15.793; quatro mensagens antigas da DLQ, originadas antes
+  da correção do bundle, foram removidas após a conferência dos logs e o alarme
+  da fila retornou a `OK`.
+- [x] Dry-run produtivo das quatro bases concluído: 6.913 linhas, 5.668 registros
+  canônicos, 1.910 conflitos de nome bloqueados e 3.758 candidatos processados;
+  nenhuma mensagem ou sequência criada.
+- [x] `APPLY` auditável concluído: 3.758 contatos criados e classificados como
+  `Gestão de Pessoas`, 2.096 evidências históricas preservadas, 1.642 eventos
+  incorporados à timeline e 3.758 permissões registradas como `UNKNOWN`.
+  Sequências, mensagens e tentativas de envio permaneceram em zero.
+- [x] Dry-run do orquestrador sobre o CRM real revisado: 3.773 avaliados,
+  nenhum elegível e nenhum envio; todos foram bloqueados por conteúdo ainda não
+  aprovado, permissão ausente e curso não aprovado, além de 46 supressões e
+  quatro registros excluídos detectados pelos gates adicionais.
+- [x] Evento sintético autenticado validou `Send`, `Bounce` e `Unsubscribe` na
+  timeline produtiva, supressão e três alertas Telegram; os leads de teste foram
+  desativados e os controles voltaram a `DRY_RUN` com kill switch ligado.
+- [x] Migration `20260919210000_skip_imported_terminal_notifications.sql`
+  aplicada após o dry-run revelar 46 alertas indevidos de bounces históricos;
+  timeline e supressões foram preservadas, a outbox histórica foi limpa e o
+  teste de regressão passou na suíte de 266 testes de banco.
+- [ ] Entrega real na inbox e reply Locaweb. O teste pelo worker foi bloqueado
+  corretamente fora da janela 08h–18h; nenhum e-mail saiu e o schedule continua
+  `DISABLED`.
 - [ ] Primeiro lote real explicitamente aprovado; schedule permanece desligado até a conferência.
 
-## Ordem obrigatória e autorizações
+## Ordem obrigatória e autorização vigente
 
-1. **Autorização de push:** publicar os commits locais no branch da PR. Não mescla nem implanta.
-2. Aguardar CI remoto completo e corrigir qualquer regressão.
-3. Atualizar a PR com `main`, repetir CI e revisão.
-4. **Autorização de merge:** mesclar somente com todos os gates verdes.
-5. Renovar AWS e Supabase; inspecionar estado real sem escrita.
-6. **Autorização de infraestrutura:** aplicar migrations e implantar a stack ainda desativada/dry-run.
-7. Configurar os dois secrets Cloudflare faltantes e validar os nomes pelo gate existente.
-8. Confirmar SES, Telegram e alarmes com dados sintéticos.
-9. **Autorização de dry-run produtivo:** comparar as 2.731 entradas seguras com o CRM real.
-10. Revisar duplicidades, histórico, supressões, base legal e conflitos; não aprovar em massa.
-11. **Autorização de importação:** executar `APPLY_CONTACTS_TO_CRM` com referência auditável.
-12. Executar dry-run do orquestrador; nenhum envio é permitido nesta etapa.
-13. **Autorização do primeiro envio:** liberar um lote manual pequeno, conferir timeline e métricas.
-14. Somente depois de nova revisão, autorizar o schedule recorrente.
+Em 19/09/2026, o responsável concedeu autorização geral para concluir as ações
+necessárias deste projeto sem novas confirmações repetitivas. Essa autorização
+permite infraestrutura, importação, dry-runs, testes sintéticos, versionamento e
+publicação das correções. Ela não remove os gates fail-closed, não transforma
+permissão `UNKNOWN` em consentimento e não permite contornar o sandbox do SES.
 
-Cada autorização vale apenas para a etapa nomeada. Push não autoriza merge; merge
-não autoriza deploy; deploy não autoriza importação; importação não autoriza envio;
-primeiro lote não autoriza o schedule recorrente.
+1. Preservar o relatório pós-`APPLY` e conferir os totais antes de qualquer envio.
+2. Executar e revisar o dry-run do orquestrador por reason code.
+3. Validar inbox, reply, descadastro, bounce e Telegram com contato sintético.
+4. Aguardar `ProductionAccessEnabled=true` na região `sa-east-1`.
+5. Somente com permissão comercial aprovada, liberar lote manual pequeno.
+6. Conferir timeline, métricas, supressões e DLQs antes de habilitar o schedule.
 
 ## Critérios de rollback
 

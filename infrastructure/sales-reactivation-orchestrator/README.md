@@ -56,10 +56,15 @@ Supabase remoto ou a base real.
 
 O arquivo `deployer-policy-extension.json` contém somente as permissões novas
 necessárias para o papel existente `rhcursos-email-deployer` criar o
-Configuration Set e a Connection da API Destination. Ele restringe SES ao nome
+Configuration Set, aplicar/remover as tags da stack e criar a Connection da API
+Destination. Ele restringe SES ao nome
 `rh-cursos-transactional`, restringe o service-linked role ao serviço oficial
 `apidestinations.events.amazonaws.com` e restringe os segredos auxiliares ao
 prefixo `events!connection/` criado pelo próprio EventBridge.
+As permissões globais de SES presentes no arquivo são somente leituras de
+status da conta, cota e identidade, usadas pelos gates de entrada em produção.
+O pedido formal de saída do sandbox deve usar uma permissão temporária e
+auditável; `ses:PutAccountDetails` não permanece no papel de deploy.
 
 Aplicar essa extensão altera permissões da conta e exige autorização explícita.
 Não anexar `AmazonEventBridgeFullAccess`: o papel já possui as ações EventBridge
@@ -100,8 +105,14 @@ sam deploy --guided --parameter-overrides \
   SesConfigurationSetName=rh-cursos-transactional \
   AllowedTelegramChatId=0 \
   ScheduleState=DISABLED \
-  RunMode=DRY_RUN
+  RunMode=DRY_RUN \
+  ReservedConcurrency=0
 ```
+
+`ReservedConcurrency=0` omite a reserva da função em contas cuja cota Lambda
+não deixa capacidade reservável depois do pool mínimo não reservado da AWS. O
+schedule desligado, o lote máximo e os gates transacionais do banco continuam
+impedindo paralelismo ou envio acidental. Quando a cota permitir, use `1`.
 
 O deploy cria o Configuration Set, publica os seis eventos aceitos pelo receptor
 (`Send`, `Delivery`, `Open`, `Click`, `Bounce` e `Complaint`) no EventBridge e os
