@@ -114,6 +114,7 @@ function fakeStore(overrides: Partial<SalesStore> = {}): SalesStore {
     loadStatus: vi.fn().mockResolvedValue(status),
     listCandidates: vi.fn().mockResolvedValueOnce([candidate]).mockResolvedValueOnce([]),
     recordDecision: vi.fn().mockResolvedValue(undefined),
+    recordDecisions: vi.fn().mockResolvedValue(undefined),
     createSequence: vi.fn().mockResolvedValue(step.sequenceId),
     claimSteps: vi.fn().mockResolvedValue([step]),
     beginSend: vi.fn().mockResolvedValue(true),
@@ -133,7 +134,11 @@ describe("sales orchestrator", () => {
     const store = fakeStore({ claimSteps: vi.fn().mockResolvedValue([]) });
     const result = await runDryRun(store, { ...config, runMode: "DRY_RUN" }, new Date("2026-09-18T13:00:00.000Z"));
     expect(result).toMatchObject({ evaluated: 1, eligible: 1, rejected: 0 });
-    expect(store.recordDecision).toHaveBeenCalledOnce();
+    expect(store.recordDecisions).toHaveBeenCalledOnce();
+    expect(store.recordDecisions).toHaveBeenCalledWith([
+      expect.objectContaining({ candidate, decision: expect.objectContaining({ eligible: true }) }),
+    ]);
+    expect(store.recordDecision).not.toHaveBeenCalled();
     expect(store.createSequence).not.toHaveBeenCalled();
   });
 

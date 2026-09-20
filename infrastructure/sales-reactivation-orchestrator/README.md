@@ -101,8 +101,9 @@ Antes de qualquer claim em modo `LIVE`, o worker chama `ses:GetAccount` e exige
 execução antes de qualquer sequência, tentativa ou envio.
 
 O timeout da função é de 120 segundos para permitir que o `DRY_RUN` percorra a
-base importada completa; esse aumento não altera lote, concorrência, agenda nem
-os gates de envio.
+base importada completa. As decisões da simulação são persistidas em lotes de até
+`CANDIDATE_PAGE_SIZE`, evitando uma requisição remota por contato; isso não altera
+lote de envio, concorrência, agenda nem os gates de envio.
 
 ## Implantação e ativação
 

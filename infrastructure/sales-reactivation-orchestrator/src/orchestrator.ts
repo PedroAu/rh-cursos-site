@@ -121,6 +121,7 @@ export async function runDryRun(
 
   while (true) {
     const candidates = await store.listCandidates(campaign.id, config.pageSize, offset);
+    const decisions = [];
     for (const candidate of candidates) {
       const decision = evaluateReactivationEligibility({
         candidate: toPolicyCandidate(candidate),
@@ -128,12 +129,13 @@ export async function runDryRun(
         control: { ...status.control, dryRun: true },
         now,
       });
-      await store.recordDecision({ runId, campaign, candidate, decision, actorId: ACTOR_ID });
+      decisions.push({ runId, campaign, candidate, decision, actorId: ACTOR_ID });
       summary.evaluated += 1;
       if (decision.eligible) summary.eligible += 1;
       else summary.rejected += 1;
       countReasons(summary, decision.reasonCodes);
     }
+    await store.recordDecisions(decisions);
     if (candidates.length < config.pageSize) break;
     offset += candidates.length;
   }
