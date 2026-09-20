@@ -101,16 +101,19 @@ export type DryRunSummary = {
   reasonCounts: Record<string, number>;
 };
 
+export type DecisionRecordInput = {
+  runId: string;
+  campaign: CampaignRecord;
+  candidate: CandidateRecord;
+  decision: EligibilityDecision;
+  actorId: string;
+};
+
 export interface SalesStore {
   loadStatus(campaignKey: string, now: Date): Promise<StatusSnapshot>;
   listCandidates(campaignId: string, limit: number, offset: number): Promise<CandidateRecord[]>;
-  recordDecision(input: {
-    runId: string;
-    campaign: CampaignRecord;
-    candidate: CandidateRecord;
-    decision: EligibilityDecision;
-    actorId: string;
-  }): Promise<void>;
+  recordDecision(input: DecisionRecordInput): Promise<void>;
+  recordDecisions(inputs: DecisionRecordInput[]): Promise<void>;
   createSequence(input: { leadId: string; campaignId: string; runId: string; correlationId: string; actorId: string }): Promise<string>;
   claimSteps(campaignKey: string, claimToken: string, now: Date, leaseSeconds: number, limit: number): Promise<ClaimedStep[]>;
   beginSend(

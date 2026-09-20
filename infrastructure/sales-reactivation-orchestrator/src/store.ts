@@ -8,6 +8,7 @@ import type {
   ClaimedNotification,
   ClaimedStep,
   ControlRecord,
+  DecisionRecordInput,
   OrchestratorSecret,
   SalesStore,
   StatusSnapshot,
@@ -138,8 +139,13 @@ export class SupabaseSalesStore implements SalesStore {
     }));
   }
 
-  async recordDecision(input: Parameters<SalesStore["recordDecision"]>[0]): Promise<void> {
-    const result = await this.client.from("sales_reactivation_decision").upsert({
+  async recordDecision(input: DecisionRecordInput): Promise<void> {
+    await this.recordDecisions([input]);
+  }
+
+  async recordDecisions(inputs: DecisionRecordInput[]): Promise<void> {
+    if (inputs.length === 0) return;
+    const rows = inputs.map((input) => ({
       lead_id: input.candidate.leadId,
       campaign_id: input.campaign.id,
       run_id: input.runId,
@@ -150,7 +156,11 @@ export class SupabaseSalesStore implements SalesStore {
       correlation_id: `${input.runId}:${input.candidate.leadId}`,
       actor_id: input.actorId,
       idempotency_key: `decision:${input.runId}:${input.campaign.id}:${input.candidate.leadId}`,
-    }, { onConflict: "idempotency_key", ignoreDuplicates: true });
+    }));
+    const result = await this.client.from("sales_reactivation_decision").upsert(rows, {
+      onConflict: "idempotency_key",
+      ignoreDuplicates: true,
+    });
     if (result.error) throw new Error(`record decision failed: ${result.error.message}`);
   }
 
