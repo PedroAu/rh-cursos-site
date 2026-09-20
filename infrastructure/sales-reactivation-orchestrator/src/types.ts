@@ -112,7 +112,7 @@ export interface SalesStore {
     actorId: string;
   }): Promise<void>;
   createSequence(input: { leadId: string; campaignId: string; runId: string; correlationId: string; actorId: string }): Promise<string>;
-  claimSteps(claimToken: string, now: Date, leaseSeconds: number, limit: number): Promise<ClaimedStep[]>;
+  claimSteps(campaignKey: string, claimToken: string, now: Date, leaseSeconds: number, limit: number): Promise<ClaimedStep[]>;
   beginSend(
     attemptId: string,
     claimToken: string,
@@ -131,6 +131,7 @@ export interface SalesStore {
 }
 
 export interface EmailSender {
+  assertProductionAccess(): Promise<void>;
   send(input: {
     from: string;
     replyTo: string;

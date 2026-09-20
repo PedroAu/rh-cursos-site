@@ -24,6 +24,7 @@
     "check:workers:secrets": "node scripts/check-workers-required-secrets.mjs",
     "sales:contacts:plan": "node scripts/contact-import-plan.mjs",
     "sales:contacts:import": "node scripts/import-contacts.mjs",
+    "sales:prospecting:approve": "node scripts/approve-sales-prospecting-cohort.mjs",
     "verify:workers": "node scripts/verify-workers-deploy.js",
     "cf:typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
     "lint": "eslint .",

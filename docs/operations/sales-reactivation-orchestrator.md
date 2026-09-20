@@ -1,4 +1,4 @@
-# Operação do time autônomo de reativação
+# Operação do time autônomo de reativação e prospecção inicial
 
 ## Escopo
 
@@ -12,6 +12,10 @@ O CRM e o event store são as fontes oficiais. “Gestão de Pessoas” é uma
 classificação temática e nunca substitui permissão comercial ou base legal.
 O estado e a ordem de ativação ficam no
 [`sales-reactivation-go-live-checklist.md`](sales-reactivation-go-live-checklist.md).
+
+Também cobre `prospecting-v1@1`, campanha separada com um único primeiro contato
+para a base importada. Sua finalidade é `COMMERCIAL_PROSPECTING`; ela não cria os
+follow-ups dos dias 5 e 10 da campanha de reativação.
 
 ## Fluxo operacional
 
@@ -33,8 +37,11 @@ O estado e a ordem de ativação ficam no
 - campanha diferente de `ACTIVE` ou conteúdo diferente de `APPROVED`.
 - e-mail inválido, permissão ausente/bloqueada/expirada ou finalidade divergente.
 - curso ausente ou fora da lista versionada.
-- supressão, sequência já processada ou interação dentro dos últimos 15 dias.
+- supressão ou sequência já processada; para reativação, também interação nos
+  últimos 15 dias. A prospecção aprovada não exige comprovação individual de
+  inatividade.
 - fora da janela de envio, limite diário/lote excedido ou tentativa ambígua anterior.
+- conta SES sem `ProductionAccessEnabled=true` na região do worker.
 
 ## Comandos
 
@@ -125,19 +132,50 @@ de nome e endereço marcado como inválido pelo provedor são bloqueados localme
 conflitos de organização ou telefone são omitidos em vez de sobrescrever dados.
 Nenhum modo cria sequência de reativação ou envia mensagem.
 
+## Aprovação agregada do primeiro contato
+
+A decisão explícita do controlador é aplicada à coorte importada sem exigir
+comprovação individual de contato anterior. O plano padrão é somente leitura,
+retorna contagens/digest sem PII e não cria sequência nem mensagem:
+
+```bash
+npm run sales:prospecting:approve
+```
+
+Depois de preservar a decisão em referência imutável, a aplicação exige o mesmo
+digest do plano e confirmação textual:
+
+```bash
+npm run sales:prospecting:approve -- \
+  --mode apply \
+  --decision-key controller-2026-09-19-prospecting-v1 \
+  --expected-digest <sha256-do-plano> \
+  --approval-reference <url-imutavel-do-commit> \
+  --expires-at <data-iso-em-ate-30-dias> \
+  --actor controller-pedro \
+  --confirm-apply APPLY_PROSPECTING_COHORT
+```
+
+O aplicador cria eventos `APPROVED` append-only com base
+`LEGITIMATE_INTEREST` e propósito `COMMERCIAL_PROSPECTING`. Permanecem fora da
+coorte: oposição/`BLOCKED`, descadastro, complaint, bounce permanente, exclusão,
+endereço ausente/inválido e qualquer supressão. Repetir a mesma decisão é
+idempotente; mudança na coorte exige novo plano e digest.
+
 ## Primeiro lote
 
 1. Gerar o plano agregado das bases e revisar duplicidades, conflitos, histórico e base legal.
 2. Comparar candidatos com o CRM/event store produtivo; não importar ou reativar por classificação temática.
 3. Aplicar a migração no projeto isolado e repetir pgTAP.
 4. Implantar Lambda com `ScheduleState=DISABLED`, `RunMode=DRY_RUN` e chat permitido `0`.
-5. Aprovar conteúdo e cadastrar evidências de permissão somente após revisão jurídica/operacional.
+5. Aplicar a decisão de coorte pelo CLI e conferir digest, validade e exclusões.
 6. Executar dry-run, exportar reason codes e revisar a coorte manualmente.
 7. Validar identidade SES, SPF/DKIM/DMARC e Configuration Set.
 8. Usar um contato sintético para testar inbox, reply-to Locaweb, descadastro, bounce e Telegram.
 9. Registrar a aprovação do conteúdo, coorte, janela e volume inicial.
 10. Alterar o allowlist do chat para o ID privado confirmado.
-11. Ativar controle/campanha, publicar `RunMode=LIVE` ainda com schedule desligado.
+11. Somente após o SES liberar produção: ativar controle/campanha e publicar
+    `RunMode=LIVE`, `CampaignKey=prospecting-v1`, ainda com schedule desligado.
 12. Executar `run-batch --confirm-live --discover` em um lote manual pequeno;
     conferir coorte, timeline e métricas.
 13. Só depois habilitar o schedule.

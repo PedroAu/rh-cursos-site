@@ -8,9 +8,17 @@ select ok((select dry_run from public.sales_orchestrator_control where id = 'glo
 select ok((select kill_switch from public.sales_orchestrator_control where id = 'global'), 'kill switch nasce ativo');
 select is((select status from public.sales_reactivation_campaign where campaign_key = 'reactivation-v1' and version = 1), 'DISABLED', 'campanha nasce desabilitada');
 select is((select content_status from public.sales_reactivation_campaign where campaign_key = 'reactivation-v1' and version = 1), 'DRAFT', 'conteúdo nasce em rascunho');
-select is((select count(*)::integer from public.sales_reactivation_campaign_course), 3, 'campanha contém exatamente três cursos');
+select is((
+  select count(*)::integer
+  from public.sales_reactivation_campaign_course campaign_course
+  join public.sales_reactivation_campaign campaign on campaign.id = campaign_course.campaign_id
+  where campaign.campaign_key = 'reactivation-v1'
+), 3, 'campanha contém exatamente três cursos');
 select is(
-  (select array_agg(delay_days order by step_index)::text from public.sales_reactivation_campaign_step),
+  (select array_agg(step.delay_days order by step.step_index)::text
+   from public.sales_reactivation_campaign_step step
+   join public.sales_reactivation_campaign campaign on campaign.id = step.campaign_id
+   where campaign.campaign_key = 'reactivation-v1'),
   '{0,5,10}',
   'cadência materializada nos dias 0, 5 e 10'
 );
@@ -146,6 +154,7 @@ select throws_ok(
 
 create temporary table claimed_step as
 select * from public.sales_claim_reactivation_steps(
+  'reactivation-v1',
   '40000000-0000-0000-0000-000000000004',
   now() + interval '1 minute',
   120,
@@ -155,6 +164,7 @@ select * from public.sales_claim_reactivation_steps(
 select is((select count(*)::integer from claimed_step), 1, 'claim reserva um passo vencido');
 select is(
   (select count(*)::integer from public.sales_claim_reactivation_steps(
+    'reactivation-v1',
     '41000000-0000-4000-8000-000000000004',
     now() + interval '1 minute',
     120,
@@ -191,6 +201,7 @@ select is(
 
 create temporary table guardrail_step as
 select * from public.sales_claim_reactivation_steps(
+  'reactivation-v1',
   '42000000-0000-4000-8000-000000000004',
   now() + interval '1 minute',
   120,

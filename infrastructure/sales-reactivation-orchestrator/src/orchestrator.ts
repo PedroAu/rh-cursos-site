@@ -2,8 +2,17 @@ import { randomUUID } from "node:crypto";
 
 import { evaluateReactivationEligibility } from "@/features/sales/reactivation/policy";
 import { formatTelegramAlert } from "@/features/sales/reactivation/telegram";
-import { REACTIVATION_TEMPLATE_VERSION, renderReactivationTemplate } from "@/features/sales/reactivation/templates";
-import { REACTIVATION_COURSES, type ReactivationCourse } from "@/features/sales/reactivation/types";
+import {
+  PROSPECTING_TEMPLATE_VERSION,
+  REACTIVATION_TEMPLATE_VERSION,
+  isSupportedSalesCampaignTemplate,
+  renderSalesCampaignTemplate,
+} from "@/features/sales/reactivation/templates";
+import {
+  PROSPECTING_SUBJECTS,
+  REACTIVATION_COURSES,
+  type SalesCampaignSubject,
+} from "@/features/sales/reactivation/types";
 import { createUnsubscribeToken } from "@/lib/email/unsubscribe-token-core";
 
 import { errorFields, log } from "./logging.js";
@@ -15,6 +24,7 @@ import type {
   OrchestratorConfig,
   OrchestratorSecret,
   SalesStore,
+  StatusSnapshot,
   TelegramSender,
 } from "./types.js";
 
@@ -49,14 +59,23 @@ function countReasons(summary: DryRunSummary, reasons: readonly string[]) {
 
 function requireCampaign(campaign: CampaignRecord | null): CampaignRecord {
   if (!campaign) throw new Error("Campaign was not found.");
-  if (campaign.templateVersion !== REACTIVATION_TEMPLATE_VERSION) {
+  if (!isSupportedSalesCampaignTemplate(campaign.templateVersion)) {
     throw new Error("Campaign template version does not match the worker bundle.");
+  }
+  const expectedTemplate = campaign.permissionPurpose === "COMMERCIAL_PROSPECTING"
+    ? PROSPECTING_TEMPLATE_VERSION
+    : REACTIVATION_TEMPLATE_VERSION;
+  if (campaign.templateVersion !== expectedTemplate) {
+    throw new Error("Campaign purpose does not match its template version.");
   }
   return campaign;
 }
 
-function asCourse(value: string): ReactivationCourse {
-  const course = REACTIVATION_COURSES.find((item) => item === value);
+function asCourse(value: string, campaign: CampaignRecord): SalesCampaignSubject {
+  const approvedSubjects = campaign.permissionPurpose === "COMMERCIAL_PROSPECTING"
+    ? PROSPECTING_SUBJECTS
+    : REACTIVATION_COURSES;
+  const course = approvedSubjects.find((item) => item === value);
   if (!course) throw new Error("Claimed step references a course outside the approved campaign.");
   return course;
 }
@@ -121,9 +140,14 @@ export async function runDryRun(
   return summary;
 }
 
-async function discoverLiveSequences(store: SalesStore, config: OrchestratorConfig, now: Date, runId: string) {
-  const status = await store.loadStatus(config.campaignKey, now);
-  const campaign = requireCampaign(status.campaign);
+async function discoverLiveSequences(
+  store: SalesStore,
+  config: OrchestratorConfig,
+  status: StatusSnapshot,
+  campaign: CampaignRecord,
+  now: Date,
+  runId: string,
+) {
   if (!status.control.enabled || status.control.dryRun || status.control.killSwitch) throw new Error("Live automation is blocked by global controls.");
   if (campaign.status !== "ACTIVE" || campaign.contentStatus !== "APPROVED") throw new Error("Live campaign is not active and approved.");
   let offset = 0;
@@ -203,22 +227,46 @@ export async function runLiveBatch(
   if (secret.telegramChatId !== config.allowedTelegramChatId) {
     throw new Error("Telegram destination is not in the deployment allowlist.");
   }
+  await dependencies.email.assertProductionAccess();
+  const status = await dependencies.store.loadStatus(config.campaignKey, now);
+  const campaign = requireCampaign(status.campaign);
   const discovery = options.discover
-    ? await discoverLiveSequences(dependencies.store, config, now, runId)
+    ? await discoverLiveSequences(dependencies.store, config, status, campaign, now, runId)
     : { created: 0 };
   const claimToken = randomUUID();
-  const steps = await dependencies.store.claimSteps(claimToken, now, config.leaseSeconds, config.batchLimit);
+  const steps = await dependencies.store.claimSteps(
+    config.campaignKey,
+    claimToken,
+    now,
+    config.leaseSeconds,
+    config.batchLimit,
+  );
   let sent = 0;
   let failed = 0;
 
   for (const step of steps) {
+    if (
+      step.campaignId !== campaign.id
+      || step.campaignKey !== campaign.campaignKey
+      || step.campaignVersion !== campaign.version
+    ) {
+      await dependencies.store.failSend(
+        step.attemptId,
+        claimToken,
+        "RETRYABLE_FAILED",
+        "CAMPAIGN_VERSION_MISMATCH",
+      );
+      failed += 1;
+      log.warn("claimed step campaign version mismatch", { attemptId: step.attemptId });
+      continue;
+    }
     let url: string;
-    let rendered: ReturnType<typeof renderReactivationTemplate>;
+    let rendered: ReturnType<typeof renderSalesCampaignTemplate>;
     try {
       url = unsubscribeUrl(secret, step.leadId, step.attemptId, now);
-      rendered = renderReactivationTemplate(step.stepIndex, {
+      rendered = renderSalesCampaignTemplate(campaign.templateVersion, step.stepIndex, {
         firstName: firstName(step.leadName),
-        courseTitle: asCourse(step.courseTitle),
+        courseTitle: asCourse(step.courseTitle, campaign),
         unsubscribeUrl: url,
       });
     } catch (error) {

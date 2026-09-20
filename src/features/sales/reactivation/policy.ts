@@ -1,4 +1,4 @@
-import { REACTIVATION_COURSES } from "@/features/sales/reactivation/types";
+import { PROSPECTING_SUBJECTS, REACTIVATION_COURSES } from "@/features/sales/reactivation/types";
 import type {
   EligibilityDecision,
   ReactivationCampaignState,
@@ -8,7 +8,6 @@ import type {
 } from "@/features/sales/reactivation/types";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const REQUIRED_PURPOSE = "COMMERCIAL_REACTIVATION";
 
 function hourInTimezone(now: Date, timezone: string): number {
   const hour = new Intl.DateTimeFormat("en-US", {
@@ -44,18 +43,21 @@ export function evaluateReactivationEligibility(input: {
   else {
     if (candidate.permission.status === "BLOCKED") reasons.push("PERMISSION_BLOCKED");
     if (candidate.permission.status !== "APPROVED" && candidate.permission.status !== "BLOCKED") reasons.push("PERMISSION_MISSING");
-    if (candidate.permission.purpose !== REQUIRED_PURPOSE) reasons.push("PURPOSE_MISMATCH");
+    if (candidate.permission.purpose !== campaign.permissionPurpose) reasons.push("PURPOSE_MISMATCH");
     if (candidate.permission.expiresAt && Date.parse(candidate.permission.expiresAt) <= now.getTime()) reasons.push("PERMISSION_EXPIRED");
   }
 
   if (candidate.suppressed) reasons.push("SUPPRESSED");
   if (candidate.hasActiveSequence) reasons.push("ACTIVE_SEQUENCE_EXISTS");
   if (candidate.hasCampaignSequence && !candidate.hasActiveSequence) reasons.push("CAMPAIGN_ALREADY_PROCESSED");
-  if (!candidate.course || !REACTIVATION_COURSES.some((course) => course === candidate.course)) {
+  const approvedSubjects = campaign.permissionPurpose === "COMMERCIAL_PROSPECTING"
+    ? PROSPECTING_SUBJECTS
+    : REACTIVATION_COURSES;
+  if (!candidate.course || !approvedSubjects.some((course) => course === candidate.course)) {
     reasons.push("COURSE_NOT_APPROVED");
   }
 
-  if (candidate.lastInteractionAt) {
+  if (campaign.permissionPurpose === "COMMERCIAL_REACTIVATION" && candidate.lastInteractionAt) {
     const inactiveForMs = now.getTime() - Date.parse(candidate.lastInteractionAt);
     if (!Number.isFinite(inactiveForMs) || inactiveForMs < candidate.minimumInactivityDays * 86_400_000) {
       reasons.push("RECENT_INTERACTION");

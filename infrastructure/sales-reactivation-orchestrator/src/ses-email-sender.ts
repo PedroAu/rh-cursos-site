@@ -1,4 +1,4 @@
-import { SendEmailCommand, SESv2Client } from "@aws-sdk/client-sesv2";
+import { GetAccountCommand, SendEmailCommand, SESv2Client } from "@aws-sdk/client-sesv2";
 
 import type { EmailSender } from "./types.js";
 
@@ -50,6 +50,13 @@ export class SesEmailSender implements EmailSender {
     // SendEmail não oferece token de idempotência. Um retry oculto do SDK após
     // timeout pode duplicar a mensagem; a state machine externa decide o estado.
     this.client = client ?? new SESv2Client({ maxAttempts: 1 });
+  }
+
+  async assertProductionAccess(): Promise<void> {
+    const account = await this.client.send(new GetAccountCommand({}));
+    if (account.ProductionAccessEnabled !== true) {
+      throw new Error("SES production access is not enabled in the configured region.");
+    }
   }
 
   async send(input: Parameters<EmailSender["send"]>[0]): Promise<{ providerMessageId: string }> {
