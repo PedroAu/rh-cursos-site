@@ -24,10 +24,10 @@ marcado quando houver evidência observável do ambiente correspondente.
 - [x] Push em `main` executa validação, mas migrations e deploys produtivos
   exigem `workflow_dispatch` explícito; merge e produção permanecem gates separados.
 
-## Estado externo ainda pendente
+## Estado externo e operacional
 
-- [x] Mac desbloqueado e sessão AWS renovada; perfil assumido
-  `rhcursos-email-deployer` validado sem expor credenciais.
+- [x] Sessão AWS administrativa renovada e perfil `rhcursos` validado sem expor
+  credenciais; a sessão técnica anterior permanece separada.
 - [x] Sessão Supabase CLI renovada; projetos de produção
   `hwpsrujkxjhmmwphqdlz` e teste `rajjoakjkmmzcwtabuxx` inspecionados sem escrita.
 - [x] Histórico de 18/09/2026: commits locais enviados à PR #30; o branch remoto
@@ -52,12 +52,12 @@ marcado quando houver evidência observável do ambiente correspondente.
   payload sintético inválido, comprovando autenticação sem gravar evento.
 - [x] Identidade de domínio SES `rhcursos.com.br`, DKIM, custom MAIL FROM, SPF e
   DMARC verificados. A identidade de domínio autoriza o remetente corporativo.
-- [ ] Conta SES fora do sandbox. A reconsideração do caso `178957960700508`
-  recebeu estado `DENIED`; o estado autoritativo em 20/09/2026 continua
-  `ProductionAccessEnabled=false`, com limite de 200/dia e 1/segundo. O recurso
-  corrigido está preparado, mas os perfis técnicos disponíveis não possuem
-  `ses:PutAccountDetails` nem `support:DescribeCases`; o reenvio e a leitura da
-  justificativa detalhada exigem sessão root/administrativa.
+- [x] Conta SES fora do sandbox na região `sa-east-1`. O caso
+  `178957960700508` está em `GRANTED` e a consulta autoritativa de 20/09/2026
+  nessa mesma região confirmou
+  `ProductionAccessEnabled=true`, `SendingEnabled=true`, enforcement `HEALTHY`,
+  limite de 50.000 mensagens/dia e 14 mensagens/segundo. A supressão global da
+  conta permanece ativa para `BOUNCE` e `COMPLAINT`.
 - [x] Estado atual do Configuration Set inspecionado: `rhub-email-events` publica
   via SNS para um endpoint Vercel legado.
 - [x] Novo caminho SES → EventBridge → API Destination → Cloudflare implantado,
@@ -74,8 +74,10 @@ marcado quando houver evidência observável do ambiente correspondente.
   segundos e as DLQs do orquestrador e dos eventos SES vazias. Evidência:
   inspeções read-only de `rhcursos-email-sales-reactivation`, do schedule
   `SalesReactivationFunctionOrchestratorSchedule`, da configuração Lambda e dos
-  atributos das filas via AWS CLI, perfil `rhcursos-email-deployer`, região
-  `sa-east-1`, em 20/09/2026.
+  atributos das filas via AWS CLI, perfil administrativo `rhcursos`, região
+  `sa-east-1`, em 20/09/2026. Identidade, DKIM e MAIL FROM estão em `SUCCESS`;
+  o destino EventBridge do Configuration Set está habilitado para `SEND`,
+  `DELIVERY`, `OPEN`, `CLICK`, `BOUNCE` e `COMPLAINT`.
 - [x] Gate de secrets do Cloudflare confirmou os seis nomes obrigatórios; a API
   do Telegram confirmou o bot `@rhcursos_bot` e a presença do chat privado no
   segredo, sem expor token ou identificador. Evidências separadas de 20/09/2026:
@@ -88,7 +90,7 @@ marcado quando houver evidência observável do ambiente correspondente.
   conferência dos logs e o alarme da fila retornou a `OK`.
 - [x] Revalidação de 20/09/2026 confirmou o recurso Scheduler do coletor IMAP
   `ImapCollectorFunctionPollSchedule` em `ENABLED` a cada minuto, execuções
-  `LIVE` concluídas, checkpoint UID 15.797 e DLQ vazia.
+  `LIVE` concluídas sem erro, checkpoint UID 15.800 e DLQ vazia.
 - [x] Dry-run produtivo das quatro bases concluído: 6.913 linhas, 5.668 registros
   canônicos, 1.910 conflitos de nome bloqueados e 3.758 candidatos processados;
   nenhuma mensagem ou sequência criada.
@@ -132,15 +134,18 @@ marcado quando houver evidência observável do ambiente correspondente.
 - [x] Retrato final do worker em 20/09/2026, concluído em aproximadamente 32
   segundos: 3.779 registros avaliados, 3.712 elegíveis e 67 rejeitados; a
   conferência no CRM confirmou zero sequências e zero mensagens da campanha.
-  Evidência: run ID `dc702aef-b7dc-4350-9a57-376102473562` nos logs do worker.
+  Evidência mais recente: run ID `a761ea97-ca9e-4ec9-ab12-169fb537f2b2`,
+  executado de `2026-09-20T17:03:47Z` a `2026-09-20T17:04:19Z`; 3.779 decisões
+  persistidas em modo `DRY_RUN`/`BLOCKED`, zero sequências, zero passos e zero
+  tentativas. O run anterior `dc702aef-b7dc-4350-9a57-376102473562` permanece
+  como evidência histórica consistente.
   A variação de 3.773 para 3.779 decorre de instantâneos em datas distintas do
   universo mais amplo e mutável do CRM; a base importada permanece reconciliada
   separadamente em 3.758. Este é o resultado mais recente, mas deve ser
   recalculado imediatamente antes de qualquer materialização.
-- [ ] Envio do primeiro lote real. O bloqueio externo atual é o SES em sandbox,
-  com `ProductionAccessEnabled=false`; mesmo que passe a `true`, isso isoladamente
-  não autoriza o envio. Antes do lote manual ainda são obrigatórios: autorização
-  comercial de go-live,
+- [ ] Envio do primeiro lote real. O gate externo do SES está atendido, mas isso
+  isoladamente não autoriza o envio. Antes do lote manual ainda são obrigatórios:
+  autorização comercial explícita de go-live,
   revalidação da decisão de coorte, conteúdo e exclusões, campanha em estado
   operacional e transição controlada do controle global para `enabled=true`,
   `dry_run=false` e `kill_switch=false`. O schedule deve permanecer desligado
@@ -152,12 +157,16 @@ Em 19/09/2026, o responsável concedeu autorização geral para concluir as aç�
 necessárias deste projeto sem novas confirmações repetitivas. Essa autorização
 permite infraestrutura, importação, decisão de coorte por legítimo interesse,
 dry-runs, testes sintéticos, versionamento e publicação das correções. Ela não
-remove os gates fail-closed e não permite contornar o sandbox do SES.
+remove os gates fail-closed nem substitui a autorização explícita imediatamente
+anterior ao primeiro envio real.
 
 1. Preservar o relatório pós-`APPLY` e conferir os totais antes de qualquer envio.
 2. Executar e revisar o dry-run do orquestrador por reason code.
 3. Validar inbox, reply, descadastro, bounce e Telegram com contato sintético.
-4. Aguardar `ProductionAccessEnabled=true` na região `sa-east-1`.
+4. Consultar o estado autoritativo do SES na região `sa-east-1` imediatamente
+   antes da transição para `LIVE` e exigir, na mesma resposta,
+   `ProductionAccessEnabled=true`, `SendingEnabled=true` e enforcement
+   `HEALTHY`; qualquer divergência mantém o sistema bloqueado.
 5. Somente com permissão comercial aprovada, liberar lote manual pequeno.
 6. Conferir timeline, métricas, supressões e DLQs antes de habilitar o schedule.
 

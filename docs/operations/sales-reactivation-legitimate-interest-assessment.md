@@ -34,7 +34,8 @@ O `APPLY` auditável da decisão
 
 A decisão possui ID `e03171df-5180-43f4-a948-d45f226d734a`, digest
 `3efb06621efeffddba6b128e961ca87fe4fee96a1a03038eb0dbdd80f616e5b0` e
-referência imutável ao commit de aprovação. O dry-run final do worker avaliou
+referência imutável ao commit de aprovação. O dry-run final do worker, run ID
+`a761ea97-ca9e-4ec9-ab12-169fb537f2b2`, avaliou
 3.779 registros existentes no CRM, dos quais 3.712 foram elegíveis e 67
 rejeitados. A diferença decorre do universo mais amplo do CRM; nenhuma exclusão
 foi convertida em aprovação. Sequências e mensagens da campanha permanecem em
@@ -195,12 +196,12 @@ idempotente e referência ao evento encerrado.
 | Incidente | Kill switch, schedule independente, DLQ, alarmes e `pause` auditável |
 | Falta de rastreabilidade | Timeline, decisões, tentativas e controles append-only |
 
-## Piloto permitido somente após os gates externos
+## Piloto permitido somente após os gates externos e autorização de go-live
 
-A decisão formal do controlador está registrada, mas o piloto continua proibido
-enquanto `ProductionAccessEnabled` não for `true` no SES da região
-`sa-east-1`. Mesmo depois desse gate externo, a autorização comercial de
-go-live registrada no
+A decisão formal do controlador está registrada e o gate externo foi atendido:
+em 20/09/2026, o SES da região `sa-east-1` informou
+`ProductionAccessEnabled=true`, `SendingEnabled=true`, revisão `GRANTED` e
+enforcement `HEALTHY`. A autorização comercial explícita de go-live registrada no
 [`sales-reactivation-go-live-checklist.md`](sales-reactivation-go-live-checklist.md)
 continua obrigatória antes de qualquer materialização ou envio. Então:
 
@@ -220,6 +221,6 @@ continua obrigatória antes de qualquer materialização ou envio. Então:
 7. ao encerrar ou vencer o piloto, registrar o evento append-only `UNKNOWN` ou
    `BLOCKED` correspondente antes de considerar uma nova decisão.
 
-O primeiro lote operacional continua pequeno e manual. A aprovação da coorte
-não autoriza contornar sandbox, supressões, oposição, limites de reputação ou os
-demais gates técnicos.
+O primeiro lote operacional continua pequeno e manual. A aprovação da coorte e
+a liberação do SES não autorizam superar supressões, oposição, limites de
+reputação ou os demais gates técnicos.
