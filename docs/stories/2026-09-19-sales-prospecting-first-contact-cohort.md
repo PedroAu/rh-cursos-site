@@ -145,8 +145,9 @@ transparente e interrompível sem exigir prova individual de relação anterior.
   - [x] Excluir supressões, registros inválidos/excluídos e `BLOCKED` mais recente.
 - [x] Versionar a campanha de primeiro contato (AC: 4–6)
   - [x] Adicionar purpose por campanha e `prospecting-v1@1` com apenas passo 0.
-  - [x] Adicionar template compilado aprovado, hash estável e segmento
-    `Gestão de Pessoas` sem atribuir falsamente um curso individual.
+  - [x] Adicionar template compilado aprovado, hash estável e assunto editorial
+    `Gestão de Pessoas`, sem filtrar a coorte pelo tema do lead nem atribuir
+    falsamente um curso individual.
   - [x] Isolar claim/renderização por campaign key/version e preservar
     `reactivation-v1`.
 - [x] Preparar infraestrutura sem ativar envio (AC: 5, 6, 8)
@@ -241,6 +242,7 @@ exclusivamente da liberação externa do SES.
 | 2026-09-19 | 0.1 | Story criada a partir da decisão explícita do controlador para primeiro contato em toda a base, com aprovação por coorte e exclusões irrenunciáveis. | River (@sm) |
 | 2026-09-19 | 0.2 | Validação de produto concluída: escopo, conteúdo, critérios de aplicação, exclusões e gates estão claros e testáveis; story aprovada para implementação. | Pax (@po) |
 | 2026-09-19 | 0.3 | Decisão por coorte, campanha isolada, CLI, guardrails SES, testes e documentação implementados e validados para revisão. | Dex (@dev) |
+| 2026-09-20 | 0.4 | Dry-run produtivo identificou filtro indevido por tema; correção passa a abranger toda a base importada elegível e mantém `Gestão de Pessoas` somente como assunto editorial. | Dex (@dev) |
 
 ## Dev Agent Record
 

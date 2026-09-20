@@ -82,11 +82,11 @@ select
   now() + interval '15 days' as expires_at;
 
 select is((select (report #>> '{evaluated}')::integer from prospecting_plan), 5, 'plano avalia a base importada');
-select is((select (report #>> '{eligible}')::integer from prospecting_plan), 1, 'plano seleciona somente o contato elegível');
+select is((select (report #>> '{eligible}')::integer from prospecting_plan), 2, 'plano seleciona todos os contatos elegíveis, independentemente do tema');
 select is((select (report #>> '{excludedByReason,PERMISSION_BLOCKED}')::integer from prospecting_plan), 1, 'BLOCKED permanece excluído');
 select is((select (report #>> '{excludedByReason,SUPPRESSED}')::integer from prospecting_plan), 1, 'supressão permanece excluída');
 select is((select (report #>> '{excludedByReason,EMAIL_INVALID}')::integer from prospecting_plan), 1, 'e-mail inválido permanece excluído');
-select is((select (report #>> '{excludedByReason,COURSE_NOT_APPROVED}')::integer from prospecting_plan), 1, 'segmento fora da campanha permanece excluído');
+select ok(not ((select report from prospecting_plan) #> '{excludedByReason}') ? 'COURSE_NOT_APPROVED', 'tema do lead não restringe a coorte de primeiro contato');
 select matches(
   (select report #>> '{cohortDigest}' from prospecting_plan),
   '^[0-9a-f]{64}$',
@@ -118,7 +118,7 @@ select public.sales_apply_prospecting_permission_cohort(
   'controller-pedro'
 ) as report;
 
-select is((select (report #>> '{approved}')::integer from prospecting_apply), 1, 'aplicação aprova a coorte selecionada');
+select is((select (report #>> '{approved}')::integer from prospecting_apply), 2, 'aplicação aprova toda a coorte elegível');
 select is(
   (select purpose from public.lead_contact_permission_event where lead_id = 'prospect-eligible' order by occurred_at desc, id desc limit 1),
   'COMMERCIAL_PROSPECTING',
@@ -147,7 +147,7 @@ insert into public.lead_interaction (
   lead_id, event_type, occurred_at, direction, source, correlation_id,
   actor_id, actor_version, safe_summary, idempotency_key, event_hash
 ) values (
-  'prospect-eligible', 'SENT', now() - interval '1 minute', 'OUTBOUND', 'CRM',
+  'prospect-other-course', 'SENT', now() - interval '1 minute', 'OUTBOUND', 'CRM',
   'pgtap:recent-prospecting', 'pgtap', '1', 'Contato anterior sem oposição.',
   'pgtap:recent-prospecting', repeat('b', 64)
 );
@@ -160,19 +160,19 @@ where campaign_key = 'prospecting-v1' and version = 1;
 
 select lives_ok(
   $$select public.sales_create_reactivation_sequence(
-    'prospect-eligible',
+    'prospect-other-course',
     (select id from public.sales_reactivation_campaign where campaign_key = 'prospecting-v1' and version = 1),
     '91000000-0000-4000-8000-000000000019',
     'pgtap:prospecting-sequence',
     'pgtap'
   )$$,
-  'prospecção aprovada não exige prova individual de inatividade'
+  'prospecção aprovada inclui outro tema e não exige prova individual de inatividade'
 );
 select is(
   (select count(*)::integer
    from public.lead_email_sequence_step step
    join public.lead_email_sequence sequence on sequence.id = step.sequence_id
-   where sequence.lead_id = 'prospect-eligible'
+   where sequence.lead_id = 'prospect-other-course'
      and sequence.campaign_key = 'prospecting-v1@1'),
   1,
   'prospecção materializa somente o primeiro contato'
