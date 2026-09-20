@@ -30,6 +30,7 @@ function snakeToCampaign(row: Record<string, unknown>): CampaignRecord {
     contentStatus: row.content_status as CampaignRecord["contentStatus"],
     policyVersion: String(row.policy_version),
     templateVersion: String(row.template_version),
+    permissionPurpose: String(row.permission_purpose) as CampaignRecord["permissionPurpose"],
     senderEmail: String(row.sender_email),
     replyToEmail: String(row.reply_to_email),
   };
@@ -164,8 +165,9 @@ export class SupabaseSalesStore implements SalesStore {
     return String(dataOrThrow(result as QueryResult<string>, "create sequence"));
   }
 
-  async claimSteps(claimToken: string, now: Date, leaseSeconds: number, limit: number): Promise<ClaimedStep[]> {
+  async claimSteps(campaignKey: string, claimToken: string, now: Date, leaseSeconds: number, limit: number): Promise<ClaimedStep[]> {
     const result = await this.client.rpc("sales_claim_reactivation_steps", {
+      p_campaign_key: campaignKey,
       p_claim_token: claimToken,
       p_now: now.toISOString(),
       p_lease_seconds: leaseSeconds,

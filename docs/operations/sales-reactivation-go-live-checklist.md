@@ -105,9 +105,9 @@ marcado quando houver evidência observável do ambiente correspondente.
 
 Em 19/09/2026, o responsável concedeu autorização geral para concluir as ações
 necessárias deste projeto sem novas confirmações repetitivas. Essa autorização
-permite infraestrutura, importação, dry-runs, testes sintéticos, versionamento e
-publicação das correções. Ela não remove os gates fail-closed, não transforma
-permissão `UNKNOWN` em consentimento e não permite contornar o sandbox do SES.
+permite infraestrutura, importação, decisão de coorte por legítimo interesse,
+dry-runs, testes sintéticos, versionamento e publicação das correções. Ela não
+remove os gates fail-closed e não permite contornar o sandbox do SES.
 
 1. Preservar o relatório pós-`APPLY` e conferir os totais antes de qualquer envio.
 2. Executar e revisar o dry-run do orquestrador por reason code.

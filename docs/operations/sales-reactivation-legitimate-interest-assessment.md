@@ -2,7 +2,9 @@
 
 Atualizado em 19/09/2026. Este artefato organiza a decisão do controlador e os
 controles técnicos necessários antes de qualquer envio. Ele **não é parecer
-jurídico**, não aprova uma base legal e não converte contatos em `APPROVED`.
+jurídico**. Em 19/09/2026, o controlador decidiu aprovar uma coorte específica
+para um único primeiro contato; a decisão só produz eventos `APPROVED` quando
+aplicada pelo fluxo auditável descrito abaixo.
 
 ## Referência e regra de decisão
 
@@ -26,9 +28,9 @@ O evento de permissão mais recente dos 3.758 contatos importados está em
 
 | Indicação trazida pela fonte | Contatos | Decisão vigente |
 | --- | ---: | --- |
-| `LEGITIMATE_INTEREST` | 2.220 | Bloqueados até teste documentado e decisão do controlador |
-| Sem base indicada | 1.538 | Bloqueados até consentimento ou outra hipótese legal válida |
-| **Total `UNKNOWN`** | **3.758** | **Nenhum envio permitido** |
+| `LEGITIMATE_INTEREST` | 2.220 | Incluídos no plano da decisão de coorte, sujeitos às exclusões |
+| Sem base indicada | 1.538 | Incluídos por decisão do controlador, sujeitos às exclusões |
+| **Total `UNKNOWN`** | **3.758** | **Permanecem bloqueados até o `APPLY` auditável** |
 
 Esses números são um retrato agregado de 19/09/2026. Devem ser recalculados
 antes de uma decisão, pois o event store é append-only e uma oposição,
@@ -36,10 +38,11 @@ supressão ou nova evidência pode alterar o estado individual.
 
 ## Escopo exato da análise
 
-O único propósito avaliado neste documento é `COMMERCIAL_REACTIVATION`: enviar
-por e-mail uma sequência curta, transparente e interrompível sobre um dos três
-cursos abaixo a uma pessoa com relacionamento anterior demonstrável com a RH
-Cursos:
+Este documento separa dois propósitos. `COMMERCIAL_REACTIVATION` envia por
+e-mail uma sequência curta, transparente e interrompível sobre um dos três
+cursos abaixo a uma pessoa com relacionamento anterior demonstrável. A decisão
+de 19/09/2026 criou `COMMERCIAL_PROSPECTING` para um único primeiro contato da
+base importada, sem exigir prova individual de relação anterior:
 
 1. Curso Prático de Atualização do eSocial: Novo Leiaute 1.3 para Órgãos Públicos.
 2. Auditoria da Folha de Pagamento.
@@ -74,14 +77,15 @@ menos intrusiva. O tratamento fica limitado a:
 - nome, e-mail, curso pertinente, origem/proveniência e histórico mínimo de
   interação;
 - deduplicação por e-mail normalizado e consulta ao CRM/event store;
-- no máximo três mensagens nos dias 0, 5 e 10;
+- no máximo três mensagens nos dias 0, 5 e 10 para reativação; exatamente um
+  primeiro contato no dia 0 para `COMMERCIAL_PROSPECTING`;
 - janela de 08h às 18h em `America/Sao_Paulo`, lote inicial manual e limites
   diários do orquestrador;
 - retenção apenas pelo prazo definido na política de privacidade e no registro
   de tratamento.
 
 Não usar dados sensíveis, inferências sensíveis, dados de crianças ou
-adolescentes, listas raspadas da internet, conteúdo de mensagens além do
+adolescentes, dados obtidos de forma ilícita, conteúdo de mensagens além do
 necessário à correlação, nem enriquecer o perfil com fontes externas para tornar
 um contato elegível.
 
@@ -93,13 +97,18 @@ finalidade original, compatibilidade com a nova finalidade, impacto e
 intrusividade. A ANPD também orienta transparência, canal fácil para exercício
 de direitos, minimização e registro das operações.
 
-Para cada coorte, comprovar cumulativamente:
+Para a reativação, comprovar cumulativamente os itens abaixo. Para a prospecção
+inicial, a decisão expressa do controlador e o digest da base substituem apenas
+a exigência de relação anterior individual; todas as demais salvaguardas
+continuam aplicáveis:
 
-- relação anterior direta e fonte rastreável sob controle da RH Cursos;
+- para reativação, relação anterior direta; para prospecção, fonte rastreável da
+  coorte e digest determinístico da base sob controle da RH Cursos;
 - compatibilidade entre o interesse/curso anterior e a oferta atual;
 - ausência de oposição, descadastro, reclamação, bounce permanente ou pedido de
   eliminação;
-- ausência de interação nos últimos 15 dias e de outra sequência ativa;
+- para reativação, ausência de interação nos últimos 15 dias; em ambos os
+  propósitos, ausência de outra sequência da mesma campanha;
 - identidade sem conflito de nome e sem dúvida sobre o destinatário;
 - aviso de privacidade claro e identificação do controlador/remetente;
 - descadastro funcional em todas as mensagens e supressão imediata;
@@ -114,14 +123,17 @@ O contato não pode receber envio quando ocorrer qualquer condição abaixo:
 
 - dado sensível, indício de menor de idade ou categoria que exija avaliação
   específica;
-- ausência de proveniência, coleta em fonte pública/raspada ou compartilhamento
-  por terceiro sem documentação compatível;
+- dado obtido por meio ilícito, fonte sem relação profissional verificável ou
+  compartilhamento incompatível com a finalidade documentada; a publicidade do
+  dado, isoladamente, não elimina as obrigações de finalidade, necessidade,
+  transparência, segurança e oposição;
 - e-mail pessoal sem relação anterior e expectativa demonstráveis;
 - finalidade original desconhecida ou incompatível;
 - oposição, descadastro, reclamação, bounce permanente, pedido de eliminação ou
   outra supressão;
 - identidade conflitante, endereço inválido ou dúvida razoável sobre a pessoa;
-- interação nos últimos 15 dias, sequência concorrente ou tentativa ambígua;
+- para reativação, interação nos últimos 15 dias; para ambos os propósitos,
+  sequência concorrente ou tentativa ambígua;
 - teste reprovado/inconclusivo, evidência expirada ou incerteza jurídica.
 
 O sistema deve falhar fechado: dúvida não é aprovação.
@@ -135,7 +147,8 @@ apagar o histórico anterior. A evidência deve conter:
 
 - referência da decisão do controlador e versão do teste;
 - responsável/revisor e instante da decisão;
-- finalidade `COMMERCIAL_REACTIVATION` e hipótese legal escolhida;
+- finalidade `COMMERCIAL_REACTIVATION` ou `COMMERCIAL_PROSPECTING` e hipótese
+  legal escolhida;
 - `evidence_ref` verificável e digest da coorte aprovada;
 - critérios de inclusão, proveniência e período da coleta;
 - justificativas de finalidade, necessidade e legítima expectativa;
@@ -179,8 +192,7 @@ idempotente e referência ao evento encerrado.
 O piloto continua proibido enquanto o SES estiver no sandbox ou não houver
 decisão formal do controlador. Depois de ambos os gates:
 
-1. selecionar no máximo cinco contatos genuínos com evidência individual
-   recuperável e sem qualquer desqualificador;
+1. aprovar a coorte completa por digest, mantendo as exclusões irrenunciáveis;
 2. aprovar uma única versão de conteúdo e um único curso;
 3. registrar os eventos `APPROVED` com `expires_at` de no máximo 30 dias em
    `America/Sao_Paulo`, versões/digests imutáveis e digest da coorte;
@@ -192,5 +204,6 @@ decisão formal do controlador. Depois de ambos os gates:
 7. ao encerrar ou vencer o piloto, registrar o evento append-only `UNKNOWN` ou
    `BLOCKED` correspondente antes de considerar uma nova decisão.
 
-Sem evidência suficiente, a ação correta é obter consentimento por um canal
-legítimo já existente ou não realizar a reativação.
+O primeiro lote operacional continua pequeno e manual. A aprovação da coorte
+não autoriza contornar sandbox, supressões, oposição, limites de reputação ou os
+demais gates técnicos.

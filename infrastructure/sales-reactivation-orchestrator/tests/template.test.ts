@@ -15,6 +15,7 @@ describe("SAM production safety", () => {
       /ReservedConcurrentExecutions: !If\n\s+- UseReservedConcurrency\n\s+- !Ref ReservedConcurrency\n\s+- !Ref AWS::NoValue/,
     );
     expect(template).toMatch(/AllowedTelegramChatId:\n\s+Type: String\n\s+Default: '0'/);
+    expect(template).toContain("Action: ses:GetAccount");
   });
 
   it("routes only approved SES events through an authenticated API destination", () => {

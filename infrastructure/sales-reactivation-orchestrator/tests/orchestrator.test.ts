@@ -21,6 +21,7 @@ const campaign: CampaignRecord = {
   version: 1,
   status: "ACTIVE",
   contentStatus: "APPROVED",
+  permissionPurpose: "COMMERCIAL_REACTIVATION",
   policyVersion: "reactivation-policy-v1",
   templateVersion: "reactivation-v1-draft-1",
   senderEmail: "pedro@rhcursos.com.br",
@@ -138,7 +139,10 @@ describe("sales orchestrator", () => {
 
   it("creates, sends, persists and notifies only in explicit live mode", async () => {
     const store = fakeStore();
-    const email: EmailSender = { send: vi.fn().mockResolvedValue({ providerMessageId: "ses-message-1" }) };
+    const email: EmailSender = {
+      assertProductionAccess: vi.fn().mockResolvedValue(undefined),
+      send: vi.fn().mockResolvedValue({ providerMessageId: "ses-message-1" }),
+    };
     const telegram: TelegramSender = { send: vi.fn().mockResolvedValue(undefined) };
     const result = await runLiveBatch(
       { store, email, telegram },
@@ -164,17 +168,65 @@ describe("sales orchestrator", () => {
 
   it("does not discover new contacts during a scheduled live batch", async () => {
     const store = fakeStore({ claimSteps: vi.fn().mockResolvedValue([]), claimNotifications: vi.fn().mockResolvedValue([]) });
-    const email: EmailSender = { send: vi.fn() };
+    const email: EmailSender = { assertProductionAccess: vi.fn().mockResolvedValue(undefined), send: vi.fn() };
     const telegram: TelegramSender = { send: vi.fn() };
     const result = await runLiveBatch({ store, email, telegram }, config, secret, new Date("2026-09-18T13:00:00.000Z"));
     expect(result).toMatchObject({ created: 0, claimed: 0, sent: 0 });
     expect(store.listCandidates).not.toHaveBeenCalled();
     expect(store.createSequence).not.toHaveBeenCalled();
+    expect(store.claimSteps).toHaveBeenCalledWith(
+      "reactivation-v1",
+      expect.any(String),
+      expect.any(Date),
+      120,
+      5,
+    );
+  });
+
+  it("blocks live execution while SES remains in sandbox", async () => {
+    const store = fakeStore();
+    const email: EmailSender = {
+      assertProductionAccess: vi.fn().mockRejectedValue(new Error("SES production access is not enabled")),
+      send: vi.fn(),
+    };
+    const telegram: TelegramSender = { send: vi.fn() };
+    await expect(runLiveBatch(
+      { store, email, telegram },
+      config,
+      secret,
+      new Date("2026-09-18T13:00:00.000Z"),
+    )).rejects.toThrow("production access");
+    expect(store.loadStatus).not.toHaveBeenCalled();
+    expect(store.claimSteps).not.toHaveBeenCalled();
+    expect(email.send).not.toHaveBeenCalled();
+  });
+
+  it("releases a claimed step when its campaign version changed", async () => {
+    const store = fakeStore({
+      claimSteps: vi.fn().mockResolvedValue([{ ...step, campaignVersion: 2 }]),
+      claimNotifications: vi.fn().mockResolvedValue([]),
+    });
+    const email: EmailSender = { assertProductionAccess: vi.fn().mockResolvedValue(undefined), send: vi.fn() };
+    const telegram: TelegramSender = { send: vi.fn() };
+    const result = await runLiveBatch(
+      { store, email, telegram },
+      config,
+      secret,
+      new Date("2026-09-18T13:00:00.000Z"),
+    );
+    expect(result).toMatchObject({ sent: 0, failed: 1 });
+    expect(store.failSend).toHaveBeenCalledWith(
+      step.attemptId,
+      expect.any(String),
+      "RETRYABLE_FAILED",
+      "CAMPAIGN_VERSION_MISMATCH",
+    );
+    expect(email.send).not.toHaveBeenCalled();
   });
 
   it("never sends when begin-send loses the guardrail race", async () => {
     const store = fakeStore({ beginSend: vi.fn().mockResolvedValue(false), claimNotifications: vi.fn().mockResolvedValue([]) });
-    const email: EmailSender = { send: vi.fn() };
+    const email: EmailSender = { assertProductionAccess: vi.fn().mockResolvedValue(undefined), send: vi.fn() };
     const telegram: TelegramSender = { send: vi.fn() };
     const result = await runLiveBatch({ store, email, telegram }, config, secret, new Date("2026-09-18T13:00:00.000Z"));
     expect(result).toMatchObject({ sent: 0, failed: 1 });
@@ -187,7 +239,7 @@ describe("sales orchestrator", () => {
       claimSteps: vi.fn().mockResolvedValue([{ ...step, courseTitle: "Curso adulterado" }]),
       claimNotifications: vi.fn().mockResolvedValue([]),
     });
-    const email: EmailSender = { send: vi.fn() };
+    const email: EmailSender = { assertProductionAccess: vi.fn().mockResolvedValue(undefined), send: vi.fn() };
     const telegram: TelegramSender = { send: vi.fn() };
 
     const result = await runLiveBatch(
@@ -210,7 +262,7 @@ describe("sales orchestrator", () => {
 
   it("blocks live mode when the private Telegram chat is not allowlisted", async () => {
     const store = fakeStore();
-    const email: EmailSender = { send: vi.fn() };
+    const email: EmailSender = { assertProductionAccess: vi.fn().mockResolvedValue(undefined), send: vi.fn() };
     const telegram: TelegramSender = { send: vi.fn() };
     await expect(runLiveBatch(
       { store, email, telegram },
@@ -227,7 +279,10 @@ describe("sales orchestrator", () => {
       completeSend: vi.fn().mockRejectedValue(new Error("database unavailable")),
       claimNotifications: vi.fn().mockResolvedValue([]),
     });
-    const email: EmailSender = { send: vi.fn().mockResolvedValue({ providerMessageId: "ses-message-1" }) };
+    const email: EmailSender = {
+      assertProductionAccess: vi.fn().mockResolvedValue(undefined),
+      send: vi.fn().mockResolvedValue({ providerMessageId: "ses-message-1" }),
+    };
     const telegram: TelegramSender = { send: vi.fn() };
     await expect(runLiveBatch({ store, email, telegram }, config, secret, new Date("2026-09-18T13:00:00.000Z"))).rejects.toThrow("database unavailable");
     expect(store.failSend).toHaveBeenCalledWith(step.attemptId, expect.any(String), "AMBIGUOUS", "PERSIST_AFTER_SES_FAILED");

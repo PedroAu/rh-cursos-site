@@ -1,8 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { loadConfig, parseSecret } from "../src/config.js";
 import { orchestratorInternals } from "../src/orchestrator.js";
-import { sesEmailInternals } from "../src/ses-email-sender.js";
+import { SesEmailSender, sesEmailInternals } from "../src/ses-email-sender.js";
 
 describe("orchestrator configuration", () => {
   it("defaults to dry-run and conservative limits", () => {
@@ -43,6 +43,12 @@ describe("orchestrator configuration", () => {
 });
 
 describe("SES payload", () => {
+  it("requires production access before live delivery", async () => {
+    const client = { send: vi.fn().mockResolvedValue({ ProductionAccessEnabled: false }) };
+    const sender = new SesEmailSender(undefined, client as never);
+    await expect(sender.assertProductionAccess()).rejects.toThrow("production access");
+  });
+
   it("builds a safe MIME message with one-click unsubscribe", () => {
     const message = Buffer.from(sesEmailInternals.mimeMessage({
       from: "pedro@rhcursos.com.br",

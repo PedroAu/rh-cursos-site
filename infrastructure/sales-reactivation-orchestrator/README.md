@@ -10,6 +10,8 @@ cada envio.
 
 - `ScheduleState=DISABLED` no template SAM.
 - `RunMode=DRY_RUN` no template e no parser de configuração.
+- `CampaignKey=reactivation-v1` por padrão; a prospecção usa explicitamente
+  `CampaignKey=prospecting-v1`.
 - Banco com `enabled=false`, `dry_run=true` e `kill_switch=true`.
 - Campanha `reactivation-v1` com status `DISABLED` e conteúdo `DRAFT`.
 - Lote padrão de 5 e limite diário inicial de 25.
@@ -94,6 +96,10 @@ do responsável. `--discover` é a única forma de incluir novos contatos na
 campanha; o agendamento processa apenas sequências já materializadas. Assim, uma
 mudança futura na base não amplia silenciosamente a coorte aprovada.
 
+Antes de qualquer claim em modo `LIVE`, o worker chama `ses:GetAccount` e exige
+`ProductionAccessEnabled=true` na região configurada. O sandbox bloqueia a
+execução antes de qualquer sequência, tentativa ou envio.
+
 ## Implantação e ativação
 
 Primeiro implante com schedule desligado e modo dry-run:
@@ -104,6 +110,7 @@ sam deploy --guided --parameter-overrides \
   SesIdentityArn=arn:aws:ses:sa-east-1:ACCOUNT:identity/rhcursos.com.br \
   SesConfigurationSetName=rh-cursos-transactional \
   AllowedTelegramChatId=0 \
+  CampaignKey=prospecting-v1 \
   ScheduleState=DISABLED \
   RunMode=DRY_RUN \
   ReservedConcurrency=0
@@ -129,7 +136,8 @@ Checklist obrigatório antes do primeiro envio:
 
 1. Migração aplicada e RLS/gates do banco aprovados.
 2. Dry-run executado sobre a base real; elegíveis e rejeitados revisados.
-3. Permissões comerciais possuem evidência; classificação temática isolada não vale.
+3. A decisão de coorte vigente possui digest, referência imutável, propósito e
+   validade; classificação temática isolada não vale.
 4. Templates e os três cursos aprovados no CRM.
 5. Identidade `pedro@rhcursos.com.br` e Configuration Set validados no SES.
 6. Bounce, complaint, descadastro, resposta IMAP e alerta Telegram testados com contato sintético.

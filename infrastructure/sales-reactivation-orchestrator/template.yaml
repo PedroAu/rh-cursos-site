@@ -37,6 +37,11 @@ Parameters:
     Type: String
     Default: DRY_RUN
     AllowedValues: [DRY_RUN, LIVE]
+  CampaignKey:
+    Type: String
+    Default: reactivation-v1
+    AllowedPattern: '^[a-z0-9][a-z0-9-]{1,119}$'
+    Description: Chave da campanha isolada que este worker pode avaliar e executar.
   BatchLimit:
     Type: Number
     Default: 5
@@ -254,6 +259,9 @@ Resources:
                   - !Ref SesIdentityArn
                   - !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:configuration-set/${SesConfigurationSetName}
               - Effect: Allow
+                Action: ses:GetAccount
+                Resource: '*'
+              - Effect: Allow
                 Action: sqs:SendMessage
                 Resource: !GetAtt OrchestratorDlq.Arn
 
@@ -278,7 +286,7 @@ Resources:
       Environment:
         Variables:
           ORCHESTRATOR_SECRET_ARN: !Ref OrchestratorSecretArn
-          CAMPAIGN_KEY: reactivation-v1
+          CAMPAIGN_KEY: !Ref CampaignKey
           RUN_MODE: !Ref RunMode
           CANDIDATE_PAGE_SIZE: '250'
           SEND_BATCH_LIMIT: !Ref BatchLimit

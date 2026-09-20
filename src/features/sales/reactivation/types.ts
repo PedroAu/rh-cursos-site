@@ -6,6 +6,10 @@ export const REACTIVATION_COURSES = [
 
 export type ReactivationCourse = (typeof REACTIVATION_COURSES)[number];
 
+export const PROSPECTING_SUBJECTS = ["Gestão de Pessoas"] as const;
+export type ProspectingSubject = (typeof PROSPECTING_SUBJECTS)[number];
+export type SalesCampaignSubject = ReactivationCourse | ProspectingSubject;
+
 export const REACTIVATION_REASON_CODES = [
   "ELIGIBLE",
   "AUTOMATION_DISABLED",
@@ -66,6 +70,7 @@ export type ReactivationCandidate = {
 export type ReactivationCampaignState = {
   status: "DISABLED" | "ACTIVE" | "PAUSED";
   contentStatus: "DRAFT" | "APPROVED" | "RETIRED";
+  permissionPurpose: "COMMERCIAL_REACTIVATION" | "COMMERCIAL_PROSPECTING";
 };
 
 export type EligibilityDecision = {
@@ -76,7 +81,7 @@ export type EligibilityDecision = {
 
 export type ReactivationTemplateVariables = {
   firstName: string;
-  courseTitle: ReactivationCourse;
+  courseTitle: SalesCampaignSubject;
   unsubscribeUrl: string;
 };
 
