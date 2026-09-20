@@ -20,14 +20,15 @@ describe("SAM production safety", () => {
   });
 
   it("routes only approved SES events through an authenticated API destination", () => {
+    const rule = template.slice(template.indexOf("  SesEventsRule:"), template.indexOf("  SesEventsDlqPolicy:"));
     expect(template).toContain("Type: AWS::SES::ConfigurationSetEventDestination");
     expect(template).toContain("Type: AWS::Events::ApiDestination");
     expect(template).toContain("ApiKeyName: x-rh-webhook-secret");
     expect(template).toContain("SecretString:sesEventsWebhookSecret");
-    expect(template).toContain("'ses:configuration-set':");
-    expect(template).toContain("- !Ref SesIdentityArn");
-    expect(template).toContain("- !Ref SesSenderAddress");
-    expect(template).toContain("State: ENABLED");
+    expect(rule).toContain("'ses:configuration-set':");
+    expect(rule).toContain("- !Ref SesSenderAddress");
+    expect(rule).not.toContain("resources:");
+    expect(rule).toContain("State: ENABLED");
   });
 
   it("retains failed SES events in a protected DLQ", () => {

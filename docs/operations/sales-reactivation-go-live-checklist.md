@@ -18,9 +18,9 @@ marcado quando houver evidência observável do ambiente correspondente.
   `5e953c7` e mesclada no commit `e462e2a`.
 - [x] Auditoria de dependências sem vulnerabilidade crítica; Next.js atualizado
   para 16.3.5 e Sharp consolidado em 0.35.4 antes da publicação da PR.
-- [x] Teste real do Telegram entregue no chat privado autorizado; o SES aceitou
-  uma única mensagem técnica destinada ao próprio `pedro@rhcursos.com.br` e
-  nenhum contato importado recebeu envio.
+- [x] Teste real do Telegram entregue no chat privado autorizado; antes do
+  piloto, o SES também aceitou uma única mensagem técnica destinada ao próprio
+  `pedro@rhcursos.com.br`.
 - [x] Push em `main` executa validação, mas migrations e deploys produtivos
   exigem `workflow_dispatch` explícito; merge e produção permanecem gates separados.
 
@@ -60,9 +60,15 @@ marcado quando houver evidência observável do ambiente correspondente.
   conta permanece ativa para `BOUNCE` e `COMPLAINT`.
 - [x] Estado atual do Configuration Set inspecionado: `rhub-email-events` publica
   via SNS para um endpoint Vercel legado.
-- [x] Novo caminho SES → EventBridge → API Destination → Cloudflare implantado,
-  autenticado e filtrado por identidade, remetente e Configuration Set; DLQs
-  vazias, conexão `AUTHORIZED`, destino `ACTIVE` e alarmes `OK`.
+- [ ] Novo caminho SES → EventBridge → API Destination → Cloudflare implantado
+  e autenticado, com DLQs vazias, conexão `AUTHORIZED`, destino `ACTIVE` e
+  alarmes `OK`. O primeiro lote real deixou `TriggeredRules`, `Invocations` e
+  `FailedInvocations` em zero; a principal hipótese é divergência no filtro
+  adicional por `resources`, pois remetente, Configuration Set, região e
+  destino foram confirmados. A correção local
+  preserva os filtros exatos de remetente e Configuration Set e remove somente
+  esse predicado redundante; ainda precisa de deploy e validação sintética antes
+  de habilitar o schedule.
 - [x] Extensão mínima do papel `rhcursos-email-deployer` aplicada e versionada,
   incluindo tags do Configuration Set e leituras necessárias aos gates SES.
 - [x] ID numérico do chat privado confirmado e teste entregue pelo
@@ -143,13 +149,27 @@ marcado quando houver evidência observável do ambiente correspondente.
   universo mais amplo e mutável do CRM; a base importada permanece reconciliada
   separadamente em 3.758. Este é o resultado mais recente, mas deve ser
   recalculado imediatamente antes de qualquer materialização.
-- [ ] Envio do primeiro lote real. O gate externo do SES está atendido, mas isso
-  isoladamente não autoriza o envio. Antes do lote manual ainda são obrigatórios:
-  autorização comercial explícita de go-live,
-  revalidação da decisão de coorte, conteúdo e exclusões, campanha em estado
-  operacional e transição controlada do controle global para `enabled=true`,
-  `dry_run=false` e `kill_switch=false`. O schedule deve permanecer desligado
-  durante o primeiro lote e só pode ser habilitado após a conferência operacional.
+- [x] Primeiro lote real executado manualmente após autorização explícita em
+  20/09/2026. O preflight revalidou SES, janela, decisão, conteúdo, exclusões e
+  limites; o dry-run imediato `78c406d0-ccb7-44b7-a881-5f4bfbc06dd5`
+  confirmou 3.712 elegíveis. A materialização auditável
+  `e6b05a12-b30f-4402-808a-8f61715f7c43` criou 3.712 sequências e não enviou
+  mensagens. O lote `ff74788b-c8f3-492e-9269-bae77d9d5f06` processou e enviou
+  exatamente 5 passos, sem falha de envio.
+- [x] Observação do lote: o SES registrou 5 envios, 4 entregas, 1 bounce, zero
+  complaint, zero reject e zero rendering failure. O CRM preserva 5 eventos
+  `SENT`; o bounce foi correlacionado a partir da lista autoritativa de supressão
+  da conta, persistido como `BOUNCED`, suprimiu o contato e interrompeu a
+  sequência. O alerta correspondente foi entregue pelo runner
+  `697c6fb0-b69f-4a38-afab-046be968a51e`; a outbox voltou a zero.
+- [x] Encerramento fail-closed do piloto: campanha `PAUSED`, controle global com
+  `enabled=false` e `kill_switch=true`, Scheduler `DISABLED`, Lambda em
+  `DRY_RUN`, 3.711 sequências ativas, 1 interrompida, 3.707 passos pendentes e 5
+  enviados. Nenhum novo e-mail pode sair nesse estado.
+- [ ] Telemetria automática pós-envio: as quatro entregas aparecem somente nas
+  métricas agregadas do SES, pois a regra EventBridge não foi acionada. Não
+  inventar eventos individuais de entrega. Corrigir, implantar e validar a rota
+  antes de qualquer ampliação ou habilitação do schedule.
 
 ## Ordem obrigatória e autorização vigente
 
@@ -169,6 +189,8 @@ anterior ao primeiro envio real.
    `HEALTHY`; qualquer divergência mantém o sistema bloqueado.
 5. Somente com permissão comercial aprovada, liberar lote manual pequeno.
 6. Conferir timeline, métricas, supressões e DLQs antes de habilitar o schedule.
+   O lote de 20/09/2026 concluiu essa observação com uma pendência: corrigir e
+   validar a ingestão automática SES → EventBridge. Até lá, manter tudo pausado.
 
 ## Critérios de rollback
 

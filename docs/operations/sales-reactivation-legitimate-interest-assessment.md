@@ -196,14 +196,19 @@ idempotente e referência ao evento encerrado.
 | Incidente | Kill switch, schedule independente, DLQ, alarmes e `pause` auditável |
 | Falta de rastreabilidade | Timeline, decisões, tentativas e controles append-only |
 
-## Piloto permitido somente após os gates externos e autorização de go-live
+## Piloto executado e expansão ainda condicionada aos gates operacionais
 
 A decisão formal do controlador está registrada e o gate externo foi atendido:
 em 20/09/2026, o SES da região `sa-east-1` informou
 `ProductionAccessEnabled=true`, `SendingEnabled=true`, revisão `GRANTED` e
-enforcement `HEALTHY`. A autorização comercial explícita de go-live registrada no
+enforcement `HEALTHY`. A autorização comercial explícita foi registrada e o
+primeiro lote manual de cinco mensagens foi executado em 20/09/2026. O SES
+registrou quatro entregas, um bounce e nenhuma complaint; o bounce foi suprimido,
+interrompeu a sequência e gerou alerta no Telegram. A expansão continua
+proibida enquanto a pendência de ingestão automática SES → EventBridge descrita
+no
 [`sales-reactivation-go-live-checklist.md`](sales-reactivation-go-live-checklist.md)
-continua obrigatória antes de qualquer materialização ou envio. Então:
+não for corrigida e validada. Então:
 
 1. confirmar a decisão e o digest; se a liberação ocorrer em ou após
    `2026-10-05T03:40:00Z`, gerar novo plano e nova decisão, sem renovar a
@@ -214,13 +219,13 @@ continua obrigatória antes de qualquer materialização ou envio. Então:
 3. confirmar que a versão de conteúdo e o assunto editorial continuam idênticos
    aos artefatos aprovados;
 4. executar dry-run, rejeitar evidência ausente/vencida e revisar os reason codes;
-5. manter o schedule desligado, liberar um único lote manual no horário permitido
-   e parar após o primeiro passo;
-6. conferir entrega, respostas, descadastros, bounces, complaints, timeline,
-   Telegram e DLQs antes de qualquer expansão;
+5. manter o schedule desligado; o único lote manual autorizado já foi encerrado
+   após cinco mensagens;
+6. corrigir e validar a ingestão automática de entrega, bounce e complaint;
+   conferir timeline, Telegram e DLQs antes de qualquer expansão;
 7. ao encerrar ou vencer o piloto, registrar o evento append-only `UNKNOWN` ou
    `BLOCKED` correspondente antes de considerar uma nova decisão.
 
-O primeiro lote operacional continua pequeno e manual. A aprovação da coorte e
-a liberação do SES não autorizam superar supressões, oposição, limites de
-reputação ou os demais gates técnicos.
+O primeiro lote operacional foi pequeno, manual e imediatamente pausado. A
+aprovação da coorte, a liberação do SES e esse piloto não autorizam superar
+supressões, oposição, limites de reputação ou os demais gates técnicos.

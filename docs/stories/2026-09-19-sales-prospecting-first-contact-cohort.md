@@ -252,6 +252,7 @@ da autorização comercial explícita e da transição controlada para `LIVE`.
 | 2026-09-20 | 0.4 | Dry-run produtivo identificou filtro indevido por tema; correção passa a abranger toda a base importada elegível e mantém `Gestão de Pessoas` somente como assunto editorial. | Dex (@dev) |
 | 2026-09-20 | 0.5 | PRs #35–#38 mescladas com todos os gates verdes; a execução autoritativa final `35493069786`, no SHA `5e953c7`, confirmou 934 testes unitários e 293 SQL. Decisão aplicada a 3.712 contatos e dry-run final concluído; envio permanece bloqueado pelo SES negado/sandbox. | Gage (@devops) |
 | 2026-09-20 | 0.6 | SES liberado para produção (`GRANTED`); nova simulação produtiva `a761ea97-ca9e-4ec9-ab12-169fb537f2b2` confirmou 3.712 elegíveis, 67 rejeitados e zero sequências/tentativas/envios. O primeiro lote continua aguardando autorização explícita de go-live. | Gage (@devops) |
+| 2026-09-20 | 0.7 | Primeiro lote autorizado: 5 enviados, 4 entregues, 1 bounce e 0 complaints. Campanha, controle global e schedule voltaram ao estado pausado. A observação deixou a regra EventBridge sem disparos; a principal hipótese é o filtro `resources`. Correção local pronta e expansão bloqueada até deploy e validação. | Gage (@devops) |
 
 ## Dev Agent Record
 
@@ -297,9 +298,10 @@ Codex (GPT-5)
   fail-closed. A prospecção aprovada não exige comprovação individual de
   inatividade, conforme decisão do controlador.
 - Worker consulta `ses:GetAccount` antes de qualquer execução `LIVE`; SES está
-  liberado e saudável, com cota de 50.000/dia e 14/s. Nenhum envio da campanha
-  foi feito para contatos importados; separadamente, a mensagem técnica única
-  para `pedro@rhcursos.com.br` foi aceita pelo SES e recebida na caixa corporativa.
+  liberado e saudável, com cota de 50.000/dia e 14/s. O primeiro lote autorizado
+  enviou exatamente 5 mensagens para a coorte importada: 4 entregas, 1 bounce e
+  nenhuma complaint. A mensagem técnica anterior para a própria caixa não faz
+  parte desses cinco envios.
 - O plano da decisão de coorte `e03171df-5180-43f4-a948-d45f226d734a`
   reconciliou 3.758 contatos importados: aplicou 3.712 eventos `APPROVED` e
   excluiu 46, com digest e expiração em `2026-10-05T03:40:00Z`.
@@ -308,9 +310,10 @@ Codex (GPT-5)
   confirmou 3.712 elegíveis, rejeitou 67 e terminou com zero sequências, zero
   tentativas e zero mensagens.
 - PRs #35–#39 foram mescladas; unitários, banco, build, E2E, secret scan,
-  CloudFormation e demais gates remotos passaram. O gate SES do AC 8 foi
-  atendido; o lote real continua pendente de autorização explícita e execução
-  manual observada.
+  CloudFormation e demais gates remotos passaram. O gate SES e o lote manual do
+  AC 8 foram atendidos. A ampliação permanece bloqueada porque o lote revelou
+  zero disparos da regra EventBridge; o bounce foi reconciliado pela supressão
+  autoritativa da conta e a correção local da regra aguarda publicação.
 
 ### File List
 

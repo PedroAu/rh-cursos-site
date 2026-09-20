@@ -151,13 +151,11 @@ Resources:
     Type: AWS::Events::Rule
     DependsOn: SesEventBridgeDestination
     Properties:
-      Description: Encaminha somente eventos da identidade e do configuration set aprovados ao CRM.
+      Description: Encaminha somente eventos do remetente e do configuration set aprovados ao CRM.
       EventBusName: default
       EventPattern:
         source:
           - aws.ses
-        resources:
-          - !Ref SesIdentityArn
         detail:
           mail:
             source:

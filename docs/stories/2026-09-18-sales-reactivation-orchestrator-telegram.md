@@ -199,6 +199,7 @@ quality_gate_tools:
 | 2026-09-18 | 2.0 | Gate de dependências eliminou alerta crítico com Next.js 16.3.5 e consolidou Sharp 0.35.4 na árvore; lint, typecheck, build e 926 testes unitários foram revalidados. | Gage (@devops) |
 | 2026-09-18 | 2.1 | Seletores E2E da confirmação de inscrição passaram a usar o heading semântico, evitando ambiguidade com o anunciador de rota do Next.js 16.3.5. | Gage (@devops) |
 | 2026-09-18 | 2.2 | A pipeline produtiva passou a exigir dispatch manual para migrations e deploys, preservando a autorização separada entre merge e produção. | Gage (@devops) |
+| 2026-09-20 | 2.3 | O primeiro lote real mostrou zero disparos da regra de eventos apesar da configuração SES ativa; a principal hipótese é divergência no filtro adicional por `resources`. O predicado foi removido localmente, mantendo remetente e Configuration Set exatos. Schedule e campanha permanecem pausados até deploy e validação sintética da rota. | Gage (@devops) |
 
 ## Dev Agent Record
 
