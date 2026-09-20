@@ -100,8 +100,10 @@ transparente e interrompível sem exigir prova individual de relação anterior.
    esse gate. (USR-05, ARC-02)
 7. **Dry-run produtivo verificável:** após a decisão da coorte, o dry-run informa
    contatos avaliados, elegíveis e rejeitados por reason code, sem PII e sem
-   criar sequência, tentativa ou mensagem. A soma é conciliada com os 3.758
-   contatos importados e as exclusões existentes. (USR-01–05, ARC-01)
+   criar sequência, tentativa ou mensagem. Há duas reconciliações explícitas:
+   o plano dos 3.758 importados resulta em 3.712 aprovados e 46 excluídos; o
+   universo ampliado do worker avalia 3.779 registros, com 3.712 elegíveis e 67
+   rejeitados. (USR-01–05, ARC-01)
 8. **Primeiro lote após liberação do SES:** quando
    `ProductionAccessEnabled=true`, a ativação usa a campanha/digest aprovados,
    limite diário e lote conservadores, janela 08h–18h em
@@ -154,12 +156,12 @@ transparente e interrompível sem exigir prova individual de relação anterior.
   - [x] Parametrizar campaign key no worker mantendo `DRY_RUN` e schedule
     desabilitado.
   - [x] Manter o gate autoritativo do SES antes de qualquer transição para LIVE.
-- [ ] Cobrir regressão e segurança (AC: 3, 5, 7, 9)
+- [x] Cobrir regressão e segurança (AC: 3, 5, 7, 9)
   - [x] Adicionar pgTAP, Vitest e testes de CLI para plano/aplicação concorrente e
     idempotente.
-  - [ ] Executar dry-run no Supabase isolado e, depois do deploy seguro, na base
+  - [x] Executar dry-run no Supabase isolado e, depois do deploy seguro, na base
     produtiva sem enviar mensagens.
-  - [ ] Executar todos os gates, revisão automática, PR, merge e pipeline
+  - [x] Executar todos os gates, revisão automática, PR, merge e pipeline
     pós-merge.
 
 ## Dev Notes
@@ -243,6 +245,7 @@ exclusivamente da liberação externa do SES.
 | 2026-09-19 | 0.2 | Validação de produto concluída: escopo, conteúdo, critérios de aplicação, exclusões e gates estão claros e testáveis; story aprovada para implementação. | Pax (@po) |
 | 2026-09-19 | 0.3 | Decisão por coorte, campanha isolada, CLI, guardrails SES, testes e documentação implementados e validados para revisão. | Dex (@dev) |
 | 2026-09-20 | 0.4 | Dry-run produtivo identificou filtro indevido por tema; correção passa a abranger toda a base importada elegível e mantém `Gestão de Pessoas` somente como assunto editorial. | Dex (@dev) |
+| 2026-09-20 | 0.5 | PRs #35–#38 mescladas com todos os gates verdes; a execução autoritativa final `35493069786`, no SHA `5e953c7`, confirmou 934 testes unitários e 293 SQL. Decisão aplicada a 3.712 contatos e dry-run final concluído; envio permanece bloqueado pelo SES negado/sandbox. | Gage (@devops) |
 
 ## Dev Agent Record
 
@@ -254,9 +257,8 @@ Codex (GPT-5)
 
 - `npm run lint`
 - `npm run typecheck`
-- `npm run test:unit` — 932 testes aprovados antes da revisão; testes focados
-  repetidos após os ajustes da revisão automatizada.
-- `npm run test:db` — 289 testes aprovados, incluindo concorrência.
+- `npm run test:unit` — 934 testes aprovados na execução autoritativa final.
+- `npm run test:db` — 293 testes aprovados, incluindo concorrência.
 - `npm run build:verify`
 - `npm run verify:sales-reactivation`
 - `supabase db lint --local --level warning` — somente dois warnings legados,
@@ -265,6 +267,14 @@ Codex (GPT-5)
 - `npx secretlint ...`
 - `coderabbit review --agent -t uncommitted` — 0 crítico/alto; achados menores
   e triviais corrigidos antes do commit.
+- PR #35: CI `35485352733` iniciou em `2026-09-20T02:58:14Z` sobre o SHA
+  `d28868c`; merge `78bb43c` em `2026-09-20T03:04:30Z`.
+- PR #36: CI `35486374325` iniciou em `2026-09-20T03:22:08Z` sobre o SHA
+  `ba23a3c`; merge `1829a4e` em `2026-09-20T03:34:31Z`.
+- PR #37: CI `35487475855` iniciou em `2026-09-20T03:47:15Z` sobre o SHA
+  `a508303`; merge `27dc005` em `2026-09-20T03:54:59Z`.
+- PR #38: CI `35493069786` iniciou em `2026-09-20T06:00:03Z` sobre o SHA
+  `5e953c7`; merge `e462e2a` em `2026-09-20T06:16:19Z`.
 
 ### Completion Notes List
 
@@ -277,6 +287,15 @@ Codex (GPT-5)
   inatividade, conforme decisão do controlador.
 - Worker consulta `ses:GetAccount` antes de qualquer execução `LIVE`; SES segue
   em sandbox, saudável, com cota 200/dia e 1/s. Nenhum envio real ocorreu.
+- O plano da decisão de coorte `e03171df-5180-43f4-a948-d45f226d734a`
+  reconciliou 3.758 contatos importados: aplicou 3.712 eventos `APPROVED` e
+  excluiu 46, com digest e expiração em `2026-10-05T03:40:00Z`.
+- Separadamente, o dry-run final do worker avaliou 3.779 registros do CRM,
+  confirmou 3.712 elegíveis, rejeitou 67 e terminou com zero sequências e zero
+  mensagens.
+- PRs #35, #36, #37 e #38 foram mescladas; unitários, banco, build, E2E,
+  secret scan, CloudFormation e demais gates remotos passaram. O item externo do
+  AC 8 continua bloqueado por `ProductionAccessEnabled=false`.
 
 ### File List
 
