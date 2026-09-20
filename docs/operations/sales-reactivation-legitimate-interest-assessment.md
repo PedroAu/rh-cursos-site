@@ -1,10 +1,10 @@
 # Prontidão de permissão e legítimo interesse — reativação comercial
 
-Atualizado em 19/09/2026. Este artefato organiza a decisão do controlador e os
+Atualizado em 20/09/2026. Este artefato organiza a decisão do controlador e os
 controles técnicos necessários antes de qualquer envio. Ele **não é parecer
 jurídico**. Em 19/09/2026, o controlador decidiu aprovar uma coorte específica
-para um único primeiro contato; a decisão só produz eventos `APPROVED` quando
-aplicada pelo fluxo auditável descrito abaixo.
+para um único primeiro contato. Em 20/09/2026, a decisão foi aplicada pelo fluxo
+auditável descrito abaixo e produziu os eventos `APPROVED` da coorte elegível.
 
 ## Referência e regra de decisão
 
@@ -23,18 +23,26 @@ sinais. Nenhum deles, isolado ou combinado, autoriza o contato.
 
 ## Estado produtivo observado
 
-O evento de permissão mais recente dos 3.758 contatos importados está em
-`UNKNOWN`:
+O `APPLY` auditável da decisão
+`controller-2026-09-20-prospecting-v1` foi concluído em 20/09/2026:
 
-| Indicação trazida pela fonte | Contatos | Decisão vigente |
+| Estado | Contatos | Evidência vigente |
 | --- | ---: | --- |
-| `LEGITIMATE_INTEREST` | 2.220 | Incluídos no plano da decisão de coorte, sujeitos às exclusões |
-| Sem base indicada | 1.538 | Incluídos por decisão do controlador, sujeitos às exclusões |
-| **Total `UNKNOWN`** | **3.758** | **Permanecem bloqueados até o `APPLY` auditável** |
+| Importados avaliados pelo plano da coorte | 3.758 | Lote `APPLY` concluído |
+| `APPROVED` para `COMMERCIAL_PROSPECTING` | 3.712 | Decisão append-only vigente somente antes de `2026-10-05T03:40:00Z` |
+| Excluídos pelo plano da coorte | 46 | Supressões e demais exclusões irrenunciáveis |
 
-Esses números são um retrato agregado de 19/09/2026. Devem ser recalculados
-antes de uma decisão, pois o event store é append-only e uma oposição,
-supressão ou nova evidência pode alterar o estado individual.
+A decisão possui ID `e03171df-5180-43f4-a948-d45f226d734a`, digest
+`3efb06621efeffddba6b128e961ca87fe4fee96a1a03038eb0dbdd80f616e5b0` e
+referência imutável ao commit de aprovação. O dry-run final do worker avaliou
+3.779 registros existentes no CRM, dos quais 3.712 foram elegíveis e 67
+rejeitados. A diferença decorre do universo mais amplo do CRM; nenhuma exclusão
+foi convertida em aprovação. Sequências e mensagens da campanha permanecem em
+zero.
+
+Esses números são um retrato agregado de 20/09/2026. O event store é
+append-only e uma oposição, supressão, expiração ou nova evidência pode
+alterar o estado individual antes do envio.
 
 ## Escopo exato da análise
 
@@ -189,13 +197,21 @@ idempotente e referência ao evento encerrado.
 
 ## Piloto permitido somente após os gates externos
 
-O piloto continua proibido enquanto o SES estiver no sandbox ou não houver
-decisão formal do controlador. Depois de ambos os gates:
+A decisão formal do controlador está registrada, mas o piloto continua proibido
+enquanto `ProductionAccessEnabled` não for `true` no SES da região
+`sa-east-1`. Mesmo depois desse gate externo, a autorização comercial de
+go-live registrada no
+[`sales-reactivation-go-live-checklist.md`](sales-reactivation-go-live-checklist.md)
+continua obrigatória antes de qualquer materialização ou envio. Então:
 
-1. aprovar a coorte completa por digest, mantendo as exclusões irrenunciáveis;
-2. aprovar uma única versão de conteúdo e um único curso;
-3. registrar os eventos `APPROVED` com `expires_at` de no máximo 30 dias em
-   `America/Sao_Paulo`, versões/digests imutáveis e digest da coorte;
+1. confirmar a decisão e o digest; se a liberação ocorrer em ou após
+   `2026-10-05T03:40:00Z`, gerar novo plano e nova decisão, sem renovar a
+   anterior automaticamente;
+2. recalcular o conjunto elegível imediatamente antes da materialização,
+   aplicando novos eventos `BLOCKED`, supressões e oposições, e exigir evento
+   `APPROVED` vigente de cada contato que for materializado;
+3. confirmar que a versão de conteúdo e o assunto editorial continuam idênticos
+   aos artefatos aprovados;
 4. executar dry-run, rejeitar evidência ausente/vencida e revisar os reason codes;
 5. manter o schedule desligado, liberar um único lote manual no horário permitido
    e parar após o primeiro passo;
