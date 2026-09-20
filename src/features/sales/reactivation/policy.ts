@@ -1,4 +1,4 @@
-import { PROSPECTING_SUBJECTS, REACTIVATION_COURSES } from "@/features/sales/reactivation/types";
+import { REACTIVATION_COURSES } from "@/features/sales/reactivation/types";
 import type {
   EligibilityDecision,
   ReactivationCampaignState,
@@ -50,10 +50,10 @@ export function evaluateReactivationEligibility(input: {
   if (candidate.suppressed) reasons.push("SUPPRESSED");
   if (candidate.hasActiveSequence) reasons.push("ACTIVE_SEQUENCE_EXISTS");
   if (candidate.hasCampaignSequence && !candidate.hasActiveSequence) reasons.push("CAMPAIGN_ALREADY_PROCESSED");
-  const approvedSubjects = campaign.permissionPurpose === "COMMERCIAL_PROSPECTING"
-    ? PROSPECTING_SUBJECTS
-    : REACTIVATION_COURSES;
-  if (!candidate.course || !approvedSubjects.some((course) => course === candidate.course)) {
+  if (
+    campaign.permissionPurpose === "COMMERCIAL_REACTIVATION"
+    && (!candidate.course || !REACTIVATION_COURSES.some((course) => course === candidate.course))
+  ) {
     reasons.push("COURSE_NOT_APPROVED");
   }
 

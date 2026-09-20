@@ -22,8 +22,9 @@ follow-ups dos dias 5 e 10 da campanha de reativação.
 1. Uma execução manual com `--discover` lê controles, campanha e candidatos no Supabase.
 2. O policy engine registra `ELIGIBLE` ou `REJECTED` com reason codes.
 3. Em `DRY_RUN`, nenhuma sequência, mensagem SES ou notificação Telegram é criada.
-4. Em `LIVE`, a sequência preserva um snapshot imutável do curso aprovado e o
-   banco revalida permissão, destinatário, curso atual, supressão e kill switches
+4. Em `LIVE`, a reativação preserva o curso aprovado; a prospecção preserva o
+   assunto editorial `Gestão de Pessoas` sem filtrar o tema original do lead. O
+   banco revalida permissão, destinatário, supressão e kill switches
    imediatamente antes do SES.
 5. Passos vencidos são reservados por claim/lease e enviados pelo SES.
 6. Eventos SES, descadastro e respostas IMAP alimentam a mesma timeline.

@@ -105,7 +105,7 @@ describe("sales reactivation core", () => {
   it("valida o propósito contra a campanha carregada", () => {
     const prospectingCandidate = {
       ...candidate,
-      course: "Gestão de Pessoas",
+      course: "Tema legado fora da classificação editorial",
       permission: { ...candidate.permission!, purpose: "COMMERCIAL_PROSPECTING" },
     };
     expect(evaluateReactivationEligibility({
@@ -128,7 +128,7 @@ describe("sales reactivation core", () => {
   it("não exige comprovação individual de inatividade na prospecção aprovada", () => {
     const prospectingCandidate = {
       ...candidate,
-      course: "Gestão de Pessoas",
+      course: null,
       lastInteractionAt: "2026-09-18T12:59:00.000Z",
       permission: { ...candidate.permission!, purpose: "COMMERCIAL_PROSPECTING" },
     };
