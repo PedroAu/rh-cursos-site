@@ -100,6 +100,10 @@ Antes de qualquer claim em modo `LIVE`, o worker chama `ses:GetAccount` e exige
 `ProductionAccessEnabled=true` na região configurada. O sandbox bloqueia a
 execução antes de qualquer sequência, tentativa ou envio.
 
+O timeout da função é de 120 segundos para permitir que o `DRY_RUN` percorra a
+base importada completa; esse aumento não altera lote, concorrência, agenda nem
+os gates de envio.
+
 ## Implantação e ativação
 
 Primeiro implante com schedule desligado e modo dry-run:

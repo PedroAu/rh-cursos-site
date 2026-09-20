@@ -16,6 +16,7 @@ describe("SAM production safety", () => {
     );
     expect(template).toMatch(/AllowedTelegramChatId:\n\s+Type: String\n\s+Default: '0'/);
     expect(template).toContain("Action: ses:GetAccount");
+    expect(template).toMatch(/Globals:\n  Function:\n(?:    [^\n]*\n)*    Timeout: 120/);
   });
 
   it("routes only approved SES events through an authenticated API destination", () => {
