@@ -83,9 +83,16 @@ marcado quando houver evidência observável do ambiente correspondente.
   aplicada após o dry-run revelar 46 alertas indevidos de bounces históricos;
   timeline e supressões foram preservadas, a outbox histórica foi limpa e o
   teste de regressão passou na suíte de 266 testes de banco.
-- [ ] Confirmação da entrega na inbox e do reply Locaweb. O SES aceitou uma
-  mensagem técnica ao endereço corporativo, mas o teste pelo worker foi bloqueado
-  corretamente fora da janela 08h–18h; o schedule continua `DISABLED`.
+- [x] Transporte real SES/Locaweb confirmado somente com a caixa corporativa:
+  a mensagem técnica aceita pelo SES chegou à inbox como UID 15.794 com
+  `Message-ID` do Amazon SES; a Locaweb aceitou a resposta SMTP para a própria
+  caixa como UID 15.797 e o coletor IMAP a examinou no ciclo seguinte,
+  avançando o checkpoint então vigente de 15.796 para 15.797. Como o envio
+  técnico original não foi criado pelo orquestrador e não possuía sequência
+  ativa no CRM, a ingestão rejeitou a
+  correlação de forma fail-closed. O caminho correlacionado `REPLIED`, a
+  interrupção e o alerta Telegram já haviam sido validados pelo evento sintético
+  autenticado. Nenhum contato importado recebeu mensagem.
 - [ ] Primeiro lote real explicitamente aprovado; schedule permanece desligado até a conferência.
 
 ## Ordem obrigatória e autorização vigente
