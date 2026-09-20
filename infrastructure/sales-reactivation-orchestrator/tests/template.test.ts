@@ -7,6 +7,13 @@ describe("SAM production safety", () => {
   it("keeps sending disabled and dry-run by default", () => {
     expect(template).toMatch(/ScheduleState:\n\s+Type: String\n\s+Default: DISABLED/);
     expect(template).toMatch(/RunMode:\n\s+Type: String\n\s+Default: DRY_RUN/);
+    expect(template).toMatch(
+      /ReservedConcurrency:\n\s+Type: Number\n\s+Default: 0\n\s+MinValue: 0\n\s+MaxValue: 10\n\s+AllowedValues: \[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10\]/,
+    );
+    expect(template).toContain("UseReservedConcurrency: !Not [!Equals [!Ref ReservedConcurrency, 0]]");
+    expect(template).toMatch(
+      /ReservedConcurrentExecutions: !If\n\s+- UseReservedConcurrency\n\s+- !Ref ReservedConcurrency\n\s+- !Ref AWS::NoValue/,
+    );
     expect(template).toMatch(/AllowedTelegramChatId:\n\s+Type: String\n\s+Default: '0'/);
   });
 

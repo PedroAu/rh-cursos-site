@@ -42,11 +42,24 @@ Parameters:
     Default: 5
     MinValue: 1
     MaxValue: 50
+  ReservedConcurrency:
+    Type: Number
+    Default: 0
+    MinValue: 0
+    MaxValue: 10
+    AllowedValues: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    Description: >-
+      Reserva concorrencia quando maior que zero. O valor 0 omite a reserva para
+      contas cuja cota regional nao deixa capacidade reservavel depois do pool
+      minimo nao reservado exigido pela AWS.
   AllowedTelegramChatId:
     Type: String
     Default: '0'
     AllowedPattern: '^-?[0-9]+$'
     Description: ID numérico do único chat Telegram autorizado; 0 mantém LIVE bloqueado.
+
+Conditions:
+  UseReservedConcurrency: !Not [!Equals [!Ref ReservedConcurrency, 0]]
 
 Globals:
   Function:
@@ -251,7 +264,10 @@ Resources:
       CodeUri: dist/
       Handler: handler.handler
       Role: !GetAtt OrchestratorExecutionRole.Arn
-      ReservedConcurrentExecutions: 1
+      ReservedConcurrentExecutions: !If
+        - UseReservedConcurrency
+        - !Ref ReservedConcurrency
+        - !Ref AWS::NoValue
       EventInvokeConfig:
         MaximumEventAgeInSeconds: 300
         MaximumRetryAttempts: 1

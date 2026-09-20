@@ -11,7 +11,9 @@
         "ses:CreateConfigurationSetEventDestination",
         "ses:DeleteConfigurationSetEventDestination",
         "ses:GetConfigurationSetEventDestinations",
-        "ses:UpdateConfigurationSetEventDestination"
+        "ses:UpdateConfigurationSetEventDestination",
+        "ses:TagResource",
+        "ses:UntagResource"
       ],
       "Resource": "arn:aws:ses:sa-east-1:620444453976:configuration-set/rh-cursos-transactional"
     },
@@ -19,6 +21,21 @@
       "Sid": "ReadSesConfigurationSetInventory",
       "Effect": "Allow",
       "Action": "ses:ListConfigurationSets",
+      "Resource": "*"
+    },
+    {
+      "Sid": "ReadSesAccountAndIdentityStatus",
+      "Effect": "Allow",
+      "Action": [
+        "ses:GetAccount",
+        "ses:GetAccountSendingEnabled",
+        "ses:GetSendQuota",
+        "ses:GetSendStatistics",
+        "ses:DescribeConfigurationSet",
+        "ses:GetIdentityVerificationAttributes",
+        "ses:GetIdentityDkimAttributes",
+        "ses:GetIdentityMailFromDomainAttributes"
+      ],
       "Resource": "*"
     },
     {

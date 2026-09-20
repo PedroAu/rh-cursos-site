@@ -1,7 +1,7 @@
 -- Pipeline de importação de contatos: idempotência, privacidade e fail-closed.
 begin;
 
-select plan(28);
+select plan(29);
 
 select ok((select relrowsecurity from pg_class where oid = 'public.contact_import_batch'::regclass), 'RLS habilitada no lote');
 select ok((select relrowsecurity from pg_class where oid = 'public.contact_import_candidate'::regclass), 'RLS habilitada nos candidatos');
@@ -77,7 +77,7 @@ select public.sales_create_contact_import_batch(
 create temporary table created_contact as
 select * from public.sales_import_contact_candidate(
   (select id from apply_batch), repeat('2', 64), 'Bia Exemplo', 'import-bia@example.test',
-  '11988880000', 'Órgão B', true, now() - interval '40 days', 'SENT', now() - interval '40 days',
+  '11988880000', 'Órgão B', true, now() - interval '40 days', 'BOUNCED', now() - interval '40 days',
   'LEGITIMATE_INTEREST', 'pgtap'
 );
 
@@ -85,7 +85,12 @@ select is((select action from created_contact), 'CREATED', 'apply cria lead inex
 select is((select count(*)::integer from public.lead where lower(email) = 'import-bia@example.test'), 1, 'lead é único após criação');
 select is((select segment_key from public.lead_segment_assignment where lead_id = (select lead_id from created_contact)), 'GESTAO_DE_PESSOAS', 'classificação é registrada fora do interesse de curso');
 select is((select status from public.lead_contact_permission_event where lead_id = (select lead_id from created_contact)), 'UNKNOWN', 'base importada não vira aprovação');
-select is((select event_type from public.lead_interaction where lead_id = (select lead_id from created_contact)), 'SENT', 'evento histórico conhecido entra na timeline');
+select is((select event_type from public.lead_interaction where lead_id = (select lead_id from created_contact)), 'BOUNCED', 'evento histórico conhecido entra na timeline');
+select is(
+  (select count(*)::integer from public.sales_notification_outbox where lead_id = (select lead_id from created_contact)),
+  0,
+  'evento terminal histórico não gera alerta operacional novo'
+);
 
 create temporary table preserved_contact as
 select * from public.sales_import_contact_candidate(
