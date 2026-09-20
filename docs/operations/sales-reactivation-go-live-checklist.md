@@ -72,6 +72,12 @@ marcado quando houver evidência observável do ambiente correspondente.
   `Gestão de Pessoas`, 2.096 evidências históricas preservadas, 1.642 eventos
   incorporados à timeline e 3.758 permissões registradas como `UNKNOWN`.
   Sequências, mensagens e tentativas de envio permaneceram em zero.
+- [x] Prontidão de permissão consolidada no
+  [`sales-reactivation-legitimate-interest-assessment.md`](sales-reactivation-legitimate-interest-assessment.md):
+  os 3.758 contatos continuam em `UNKNOWN`; 2.220 trouxeram da fonte a indicação
+  `LEGITIMATE_INTEREST` e 1.538 não trouxeram base. A indicação de origem não é
+  aprovação: ambos os grupos permanecem bloqueados até decisão documentada do
+  controlador, e nenhum evento `APPROVED` foi criado.
 - [x] Dry-run do orquestrador sobre o CRM real revisado: 3.773 avaliados,
   nenhum elegível e nenhum envio; todos foram bloqueados por conteúdo ainda não
   aprovado, permissão ausente e curso não aprovado, além de 46 supressões e
