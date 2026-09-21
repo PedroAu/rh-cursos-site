@@ -6,6 +6,9 @@
 05db7c1cb4a95a7671577adf23f531eadd06c4c3:.claude/settings.json:curl-auth-header:24
 2150afc5f542780be49f3a292be2645f78498e1e:docs/api/openapi.yaml:generic-api-key:339
 2150afc5f542780be49f3a292be2645f78498e1e:public/api-docs.html:generic-api-key:232
+# False positive: generated OpenAPI documentation contained a redacted JWT-shaped example;
+# the source example was replaced with `example-access-token` in the following commit.
+f95cea27a04369147860a1c78e2084715f8bf819:public/api-docs.html:generic-api-key:232
 4d5e7fdbcab7d1845fe969f42d839d1f67b517d1:.env.security:generic-api-key:28
 531e3ebabf0c777d3f1afaf183a1981e200974bf:docs/DEPLOYMENT.md:generic-api-key:68
 531e3ebabf0c777d3f1afaf183a1981e200974bf:docs/QUICK-START.md:generic-api-key:52

@@ -195,8 +195,10 @@ paths:
                 $ref: '#/components/schemas/RealtimeTokenResponse'
               examples:
                 token:
+                  summary: Token ilustrativo
+                  description: O valor `example-access-token` é apenas um marcador e não representa um JWT válido.
                   value:
-                    accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                    accessToken: example-access-token
                     expiresAt: 1800000000000
         '401':
           $ref: '#/components/responses/SsrSessionInvalid'
