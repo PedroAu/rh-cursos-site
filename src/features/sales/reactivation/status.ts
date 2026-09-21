@@ -16,7 +16,7 @@ export interface SalesStatusDataSource {
   countPendingSteps(sequencePattern: string): Promise<SalesStatusQueryResult>;
   countSentSteps(sequencePattern: string): Promise<SalesStatusQueryResult>;
   countInterruptedSequences(sequencePattern: string): Promise<SalesStatusQueryResult>;
-  countFailedAttempts(sequencePattern: string): Promise<SalesStatusQueryResult>;
+  countFailedAttempts(campaignKey: string): Promise<SalesStatusQueryResult>;
   countPendingNotifications(campaignKey: string): Promise<SalesStatusQueryResult>;
   getMetrics(
     campaignKey: string,
@@ -49,11 +49,8 @@ function createSalesStatusDataSource(client: SupabaseClient): SalesStatusDataSou
       return client.from("lead_email_sequence").select("id", { count: "exact", head: true })
         .eq("status", "INTERRUPTED").like("campaign_key", sequencePattern);
     },
-    async countFailedAttempts(sequencePattern) {
-      return client.from("sales_send_attempt")
-        .select("id,lead_email_sequence_step!inner(lead_email_sequence!inner(campaign_key))", { count: "exact", head: true })
-        .in("status", ["PERMANENT_FAILED", "AMBIGUOUS"])
-        .like("lead_email_sequence_step.lead_email_sequence.campaign_key", sequencePattern);
+    async countFailedAttempts(campaignKey) {
+      return client.rpc("sales_campaign_failed_attempts", { p_campaign_key: campaignKey });
     },
     async countPendingNotifications(campaignKey) {
       return client.rpc("sales_campaign_pending_notifications", { p_campaign_key: campaignKey });
@@ -178,7 +175,7 @@ export async function getReactivationStatus(
       source.countPendingSteps(campaignSequencePattern),
       source.countSentSteps(campaignSequencePattern),
       source.countInterruptedSequences(campaignSequencePattern),
-      source.countFailedAttempts(campaignSequencePattern),
+      source.countFailedAttempts(selectedCampaignKey),
       source.countPendingNotifications(selectedCampaignKey),
       source.getMetrics(selectedCampaignKey, periodFrom, periodTo),
     ]);
@@ -228,7 +225,11 @@ export async function getReactivationStatus(
       pendingSteps: readCount(pendingResult, "passos pendentes"),
       sentSteps: readCount(sentResult, "passos enviados"),
       interruptedSequences: readCount(interruptedResult, "sequências interrompidas"),
-      failedAttempts: readCount(failedResult, "tentativas com falha"),
+      failedAttempts: parseResult(
+        failedResult,
+        z.number().int().nonnegative(),
+        "tentativas com falha",
+      ),
       pendingNotifications,
     },
     metrics: {

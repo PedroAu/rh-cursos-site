@@ -61,4 +61,38 @@ grant execute on function public.sales_campaign_pending_notifications(varchar)
 comment on function public.sales_campaign_pending_notifications(varchar) is
   'Conta alertas pendentes ou com falha de todas as versões de uma campanha, sem expor PII.';
 
+create or replace function public.sales_campaign_failed_attempts(
+  p_campaign_key varchar
+)
+returns bigint
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  with selected_campaign as (
+    select campaign.campaign_key || '@' || campaign.version::text as sequence_key
+    from public.sales_reactivation_campaign campaign
+    where campaign.campaign_key = p_campaign_key
+  )
+  select count(*)::bigint
+  from public.sales_send_attempt attempt
+  join public.lead_email_sequence_step step
+    on step.id = attempt.sequence_step_id
+  join public.lead_email_sequence sequence
+    on sequence.id = step.sequence_id
+  where attempt.status in ('PERMANENT_FAILED', 'AMBIGUOUS')
+    and sequence.campaign_key in (
+      select selected.sequence_key from selected_campaign selected
+    );
+$$;
+
+revoke all on function public.sales_campaign_failed_attempts(varchar)
+  from public, anon, authenticated;
+grant execute on function public.sales_campaign_failed_attempts(varchar)
+  to service_role;
+
+comment on function public.sales_campaign_failed_attempts(varchar) is
+  'Conta tentativas terminais ou ambíguas de todas as versões de uma campanha, sem expor PII.';
+
 commit;

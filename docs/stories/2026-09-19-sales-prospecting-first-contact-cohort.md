@@ -255,6 +255,7 @@ da autorização comercial explícita e da transição controlada para `LIVE`.
 | 2026-09-20 | 0.7 | Primeiro lote autorizado: 5 enviados, 4 entregues, 1 bounce e 0 complaints. Campanha, controle global e schedule voltaram ao estado pausado. A observação deixou a regra EventBridge sem disparos; a principal hipótese é o filtro `resources`. Correção local pronta e expansão bloqueada até deploy e validação. | Gage (@devops) |
 | 2026-09-21 | 0.8 | Filtro EventBridge corrigido em produção e validado com um único envio ao Mailbox Simulator: `SENT` e `DELIVERED` persistidos automaticamente, duas invocações, zero falhas e DLQ vazia. O registro sintético foi desativado; nenhuma mensagem adicional foi enviada a contatos reais. | Gage (@devops) |
 | 2026-09-21 | 0.9 | Corrigido o status administrativo para usar `prospecting-v1`, campanha efetivamente configurada no worker produtivo, mantendo consulta explícita de outras campanhas por parâmetro validado e isolando falhas/alertas pela sequência da campanha. | Dex (@dev) |
+| 2026-09-21 | 1.0 | CLI/worker e API administrativa passaram a compartilhar RPCs service-role para falhas e alertas isolados por campanha; regressão local concluiu com 950 unitários, 314 SQL e 24 testes do worker. | Dex (@dev) |
 
 ## Dev Agent Record
 
@@ -278,6 +279,10 @@ Codex (GPT-5)
 - `npm run test:unit -- --reporter=dot` — 950/950 aprovados.
 - `npm run test:db` — 20 arquivos e 306/306 testes aprovados, incluindo
   isolamento de alertas por campanha e versão.
+- `npm run test:db` — 20 arquivos e 314/314 testes aprovados após cobrir também
+  falhas agregadas por campanha, versões e privilégios service-role.
+- `npm run verify` em `infrastructure/sales-reactivation-orchestrator` — 24/24
+  testes, typecheck, bundle e smoke de carregamento aprovados.
 - `coderabbit review --agent -t uncommitted` — 0 crítico/alto; achados menores
   e triviais corrigidos antes do commit.
 - PR #35: CI `35485352733` iniciou em `2026-09-20T02:58:14Z` sobre o SHA
@@ -325,10 +330,13 @@ Codex (GPT-5)
   alinhada ao `CAMPAIGN_KEY` da Lambda produtiva. Administradores ainda podem
   consultar `reactivation-v1` explicitamente; chaves fora do contrato são
   rejeitadas antes da consulta de status da campanha.
-- Contadores de falhas e alertas deixaram de misturar campanhas: tentativas e
-  notificações são correlacionadas às sequências da chave selecionada. As duas
-  consultas relacionais foram validadas em modo somente leitura contra a
-  produção, sem imprimir PII.
+- Contadores de falhas e alertas deixaram de misturar campanhas: API e CLI/worker
+  usam os mesmos agregados service-role, correlacionados às sequências de todas
+  as versões da chave selecionada. A migration permanece pendente em produção
+  até o deploy autorizado após o merge da PR #40. A ordem é obrigatória:
+  aplicar/verificar a migration e privilégios primeiro; somente depois implantar
+  frontend e Lambda. O deploy do Lambda continua separado por Change Set, em
+  `DRY_RUN`, com schedule desligado; ausência dos RPCs bloqueia os consumidores.
 
 ### File List
 
@@ -348,6 +356,7 @@ Codex (GPT-5)
 - `infrastructure/sales-reactivation-orchestrator/template.yaml`
 - `infrastructure/sales-reactivation-orchestrator/tests/config-and-ses.test.ts`
 - `infrastructure/sales-reactivation-orchestrator/tests/orchestrator.test.ts`
+- `infrastructure/sales-reactivation-orchestrator/tests/store.test.ts`
 - `infrastructure/sales-reactivation-orchestrator/tests/template.test.ts`
 - `package.json`
 - `scripts/approve-sales-prospecting-cohort.d.mts`

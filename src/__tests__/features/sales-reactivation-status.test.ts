@@ -43,6 +43,7 @@ const defaultMetrics = {
 
 function createSource(options?: {
   pendingNotifications?: number;
+  failedAttempts?: number;
   metrics?: Record<string, unknown>;
   campaign?: typeof campaign;
 }): SalesStatusDataSource {
@@ -64,7 +65,10 @@ function createSource(options?: {
     countPendingSteps: vi.fn(async () => emptyCount),
     countSentSteps: vi.fn(async () => emptyCount),
     countInterruptedSequences: vi.fn(async () => emptyCount),
-    countFailedAttempts: vi.fn(async () => emptyCount),
+    countFailedAttempts: vi.fn(async () => ({
+      data: options?.failedAttempts ?? 0,
+      error: null,
+    })),
     countPendingNotifications: vi.fn(async () => ({
       data: options?.pendingNotifications ?? 0,
       error: null,
@@ -111,7 +115,7 @@ describe("getReactivationStatus", () => {
       "2026-08-19T12:00:00.000Z",
       "2026-09-18T12:00:00.000Z",
     );
-    expect(source.countFailedAttempts).toHaveBeenCalledWith("prospecting-v1@%");
+    expect(source.countFailedAttempts).toHaveBeenCalledWith("prospecting-v1");
     expect(source.countPendingNotifications).toHaveBeenCalledWith("prospecting-v1");
     expect(status.counters.pendingNotifications).toBe(3);
     expect(status.metrics).toMatchObject({
@@ -149,7 +153,7 @@ describe("getReactivationStatus", () => {
     expect(source.countPendingSteps).toHaveBeenCalledWith("reactivation-v1@%");
     expect(source.countSentSteps).toHaveBeenCalledWith("reactivation-v1@%");
     expect(source.countInterruptedSequences).toHaveBeenCalledWith("reactivation-v1@%");
-    expect(source.countFailedAttempts).toHaveBeenCalledWith("reactivation-v1@%");
+    expect(source.countFailedAttempts).toHaveBeenCalledWith("reactivation-v1");
     expect(source.countPendingNotifications).toHaveBeenCalledWith("reactivation-v1");
     expect(source.getMetrics).toHaveBeenCalledWith(
       "reactivation-v1",
@@ -200,7 +204,7 @@ describe("getReactivationStatus", () => {
     source.countFailedAttempts = vi.fn(async () => ({ data: null, error: null }));
 
     await expect(getReactivationStatus(source)).rejects.toThrow(
-      "tentativas com falha: contagem ausente",
+      "tentativas com falha: sem dados",
     );
   });
 

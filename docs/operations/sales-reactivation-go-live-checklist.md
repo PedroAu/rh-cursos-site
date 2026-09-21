@@ -171,10 +171,29 @@ marcado quando houver evidência observável do ambiente correspondente.
   históricas do primeiro lote continuam somente nas métricas agregadas do SES e
   não serão reconstruídas artificialmente. O schedule permanece `DISABLED` e a
   campanha pausada; esta validação técnica não autoriza novos envios reais.
+- [x] Auditoria read-only de 21/09/2026 reconfirmou SES com acesso produtivo e
+  enforcement `HEALTHY`, stack `UPDATE_COMPLETE`, Lambda em `DRY_RUN`, campanha
+  `PAUSED`, controle `enabled=false` com kill switch ligado, schedule comercial
+  `DISABLED`, coletor IMAP `ENABLED`, seis secrets do Worker presentes, alarmes
+  `OK` e as duas DLQs vazias. A regressão local vigente passou com 950 testes
+  unitários, 314 SQL e 24 testes do worker.
 - [ ] PR #40 mesclada em `main`. A branch está publicada, revisada e com todos
   os checks verdes, mas o merge continua condicionado à autorização explícita
   do responsável. A stack produtiva já contém a correção aplicada por Change
-  Set; este gate reconcilia a fonte oficial do repositório com a produção.
+  Set; este gate reconcilia a fonte oficial do repositório com a produção. A
+  migration `20260921143000_scope_sales_status_notifications.sql` aparece apenas
+  no histórico local e deve ser implantada separadamente após o merge.
+- [ ] Migration `20260921143000_scope_sales_status_notifications.sql` aplicada
+  e verificada em produção antes de qualquer deploy dos consumidores
+  `src/features/sales/reactivation/status.ts` e
+  `infrastructure/sales-reactivation-orchestrator/src/store.ts`. O gate deve
+  confirmar os dois RPCs e `EXECUTE` exclusivo de `service_role`; falha ou
+  ausência bloqueia frontend e Lambda.
+- [ ] Consumidores dos RPCs implantados somente após o gate anterior: frontend
+  pela pipeline produtiva ordenada (`migrate-database` antes de
+  `deploy-frontend`) e Lambda por Change Set separado. O Change Set deve manter
+  `RunMode=DRY_RUN`, `ScheduleState=DISABLED`, lote 5 e allowlist de Telegram
+  `0`; depois, executar apenas `status` e confirmar contadores por campanha.
 - [ ] Próxima liberação comercial decidida após revisão do piloto. O lote teve
   um bounce em cinco envios; até haver decisão explícita sobre novo lote ou
   schedule, preservar campanha `PAUSED`, controle `enabled=false` com kill

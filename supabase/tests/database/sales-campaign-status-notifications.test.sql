@@ -1,7 +1,7 @@
 -- Story 2026-09-19 — alertas do painel comercial isolados por campanha.
 begin;
 
-select plan(13);
+select plan(21);
 
 select ok(
   has_function_privilege('service_role', 'public.sales_campaign_pending_notifications(varchar)', 'EXECUTE'),
@@ -14,6 +14,18 @@ select ok(
 select ok(
   not has_function_privilege('authenticated', 'public.sales_campaign_pending_notifications(varchar)', 'EXECUTE'),
   'authenticated não consulta alertas comerciais diretamente'
+);
+select ok(
+  has_function_privilege('service_role', 'public.sales_campaign_failed_attempts(varchar)', 'EXECUTE'),
+  'service role consulta falhas agregadas por campanha'
+);
+select ok(
+  not has_function_privilege('anon', 'public.sales_campaign_failed_attempts(varchar)', 'EXECUTE'),
+  'anon não consulta falhas comerciais'
+);
+select ok(
+  not has_function_privilege('authenticated', 'public.sales_campaign_failed_attempts(varchar)', 'EXECUTE'),
+  'authenticated não consulta falhas comerciais diretamente'
 );
 
 insert into public.sales_reactivation_campaign (
@@ -66,6 +78,22 @@ insert into public.sales_send_attempt (
 ) values
   ('71000000-0000-4000-8000-000000000005', '71000000-0000-4000-8000-000000000003', 1, 'PERMANENT_FAILED', 'status:attempt:a', '71000000-0000-4000-8000-000000000006'),
   ('72000000-0000-4000-8000-000000000005', '72000000-0000-4000-8000-000000000003', 1, 'PERMANENT_FAILED', 'status:attempt:b', '72000000-0000-4000-8000-000000000006');
+
+select is(
+  public.sales_campaign_failed_attempts('status-scope-a'),
+  1::bigint,
+  'campanha A conta apenas sua tentativa com falha'
+);
+select is(
+  public.sales_campaign_failed_attempts('status-scope-b'),
+  1::bigint,
+  'campanha B permanece isolada da campanha A nas falhas'
+);
+select is(
+  public.sales_campaign_failed_attempts('status-scope-missing'),
+  0::bigint,
+  'campanha inexistente retorna zero falhas'
+);
 
 insert into public.sales_notification_outbox (
   event_key, kind, lead_id, interaction_id, safe_payload, status
@@ -140,6 +168,12 @@ insert into public.sales_notification_outbox (
 );
 
 select is(
+  public.sales_campaign_failed_attempts('status-scope-a'),
+  2::bigint,
+  'falhas de todas as versões da campanha A são agregadas'
+);
+
+select is(
   public.sales_campaign_pending_notifications('status-scope-a'),
   3::bigint,
   'uma linha ligada a versões distintas por interação e tentativa é contada uma vez'
@@ -160,6 +194,12 @@ insert into public.sales_notification_outbox (
   'attempt:72000000-0000-4000-8000-000000000025',
   'PERMANENT_FAILURE', 'status-scope-lead-b',
   '71000000-0000-4000-8000-000000000004', '{}'::jsonb, 'PENDING'
+);
+
+select ok(
+  public.sales_campaign_failed_attempts('status-scope-a') = 2::bigint
+  and public.sales_campaign_failed_attempts('status-scope-b') = 2::bigint,
+  'tentativas com falha continuam isoladas por campanha após novos registros'
 );
 
 select ok(
