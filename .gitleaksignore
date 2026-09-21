@@ -47,4 +47,5 @@ f2cb359c5e5050e5049ef795010df65d2e8fde1b:storybook-static/356.ac5cae1a.iframe.bu
 f5aefbf5ba332846e51a8adebc9fd6fdad955bad:PHASE_2_STATUS.md:curl-auth-header:243
 # Supabase publishable key: intentionally exposed client identifier; RLS and
 # database grants enforce access. It is not a service-role credential.
+a22bc8dfcc8a780ede671983e28d1333f3bd8188:wrangler.jsonc:generic-api-key:11
 93e0022a777f14480942b6933ef6d03d91753d7d:wrangler.jsonc:generic-api-key:12
