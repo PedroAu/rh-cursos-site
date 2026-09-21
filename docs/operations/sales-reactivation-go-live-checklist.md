@@ -171,6 +171,14 @@ marcado quando houver evidência observável do ambiente correspondente.
   históricas do primeiro lote continuam somente nas métricas agregadas do SES e
   não serão reconstruídas artificialmente. O schedule permanece `DISABLED` e a
   campanha pausada; esta validação técnica não autoriza novos envios reais.
+- [ ] PR #40 mesclada em `main`. A branch está publicada, revisada e com todos
+  os checks verdes, mas o merge continua condicionado à autorização explícita
+  do responsável. A stack produtiva já contém a correção aplicada por Change
+  Set; este gate reconcilia a fonte oficial do repositório com a produção.
+- [ ] Próxima liberação comercial decidida após revisão do piloto. O lote teve
+  um bounce em cinco envios; até haver decisão explícita sobre novo lote ou
+  schedule, preservar campanha `PAUSED`, controle `enabled=false` com kill
+  switch ligado, Scheduler `DISABLED` e Lambda em `DRY_RUN`.
 
 ## Ordem obrigatória e autorização vigente
 
@@ -190,8 +198,9 @@ anterior ao primeiro envio real.
    `HEALTHY`; qualquer divergência mantém o sistema bloqueado.
 5. Somente com permissão comercial aprovada, liberar lote manual pequeno.
 6. Conferir timeline, métricas, supressões e DLQs antes de habilitar o schedule.
-   O lote de 20/09/2026 concluiu essa observação com uma pendência: corrigir e
-   validar a ingestão automática SES → EventBridge. Até lá, manter tudo pausado.
+   A ingestão automática SES → EventBridge foi corrigida e validada em
+   21/09/2026. O gate remanescente é a decisão operacional/reputacional após o
+   bounce do piloto; até essa decisão explícita, manter tudo pausado.
 
 ## Critérios de rollback
 
