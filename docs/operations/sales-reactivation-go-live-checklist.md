@@ -175,25 +175,30 @@ marcado quando houver evidência observável do ambiente correspondente.
   enforcement `HEALTHY`, stack `UPDATE_COMPLETE`, Lambda em `DRY_RUN`, campanha
   `PAUSED`, controle `enabled=false` com kill switch ligado, schedule comercial
   `DISABLED`, coletor IMAP `ENABLED`, seis secrets do Worker presentes, alarmes
-  `OK` e as duas DLQs vazias. A regressão local vigente passou com 950 testes
-  unitários, 314 SQL e 24 testes do worker.
-- [ ] PR #40 mesclada em `main`. A branch está publicada, revisada e com todos
-  os checks verdes, mas o merge continua condicionado à autorização explícita
-  do responsável. A stack produtiva já contém a correção aplicada por Change
-  Set; este gate reconcilia a fonte oficial do repositório com a produção. A
-  migration `20260921143000_scope_sales_status_notifications.sql` aparece apenas
-  no histórico local e deve ser implantada separadamente após o merge.
-- [ ] Migration `20260921143000_scope_sales_status_notifications.sql` aplicada
-  e verificada em produção antes de qualquer deploy dos consumidores
-  `src/features/sales/reactivation/status.ts` e
-  `infrastructure/sales-reactivation-orchestrator/src/store.ts`. O gate deve
-  confirmar os dois RPCs e `EXECUTE` exclusivo de `service_role`; falha ou
-  ausência bloqueia frontend e Lambda.
-- [ ] Consumidores dos RPCs implantados somente após o gate anterior: frontend
-  pela pipeline produtiva ordenada (`migrate-database` antes de
-  `deploy-frontend`) e Lambda por Change Set separado. O Change Set deve manter
-  `RunMode=DRY_RUN`, `ScheduleState=DISABLED`, lote 5 e allowlist de Telegram
-  `0`; depois, executar apenas `status` e confirmar contadores por campanha.
+  `OK` e as duas DLQs vazias. No SHA
+  `83e22c8310a6e068c57fab36beb2c08556adb178`, a execução produtiva
+  `35632718621` passou com 951 testes unitários e 314 SQL; imediatamente antes
+  do Change Set, `npm run verify` no pacote do orquestrador aprovou seus 24
+  testes, typecheck, build e smoke de carregamento.
+- [x] PR #40 mesclada em `main` no commit
+  `2bb7946811396cc9ea43a3fbbbcd79b37c28ef93`, após todos os checks verdes. A
+  correção complementar do gitleaks para o histórico completo foi revisada na
+  PR #41 e mesclada no commit `83e22c8310a6e068c57fab36beb2c08556adb178`.
+- [x] Migration `20260921143000_scope_sales_status_notifications.sql` aplicada
+  em produção pela execução `35632718621` da pipeline produtiva. Após o deploy,
+  os RPCs `sales_campaign_pending_notifications` e
+  `sales_campaign_failed_attempts` responderam `200` com escopo da campanha e
+  credencial `service_role`; chamada sem autenticação respondeu `401`.
+- [x] Consumidores dos RPCs implantados após o gate anterior: Edge Functions e
+  frontend Cloudflare pela pipeline produtiva ordenada, com verificação das
+  rotas públicas concluída. A Lambda foi atualizada separadamente pelo Change
+  Set `samcli-deploy1790012537`, sem substituição de recurso. A inspeção final
+  confirmou stack `UPDATE_COMPLETE`, função ativa em `DRY_RUN`,
+  `ScheduleState=DISABLED`, lote 5, allowlist de Telegram `0`, cinco alarmes em
+  `OK` e ambas as DLQs vazias. O comando somente leitura `status` confirmou a
+  campanha `PAUSED`, controle `enabled=false`, kill switch ligado, 3.707 passos
+  pendentes, 5 enviados, 1 sequência interrompida pelo bounce já documentado,
+  zero tentativas com estado `FAILED` e zero notificações pendentes.
 - [ ] Próxima liberação comercial decidida após revisão do piloto. O lote teve
   um bounce em cinco envios; até haver decisão explícita sobre novo lote ou
   schedule, preservar campanha `PAUSED`, controle `enabled=false` com kill
