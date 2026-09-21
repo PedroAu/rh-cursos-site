@@ -201,6 +201,7 @@ quality_gate_tools:
 | 2026-09-18 | 2.2 | A pipeline produtiva passou a exigir dispatch manual para migrations e deploys, preservando a autorização separada entre merge e produção. | Gage (@devops) |
 | 2026-09-20 | 2.3 | O primeiro lote real mostrou zero disparos da regra de eventos apesar da configuração SES ativa; a principal hipótese é divergência no filtro adicional por `resources`. O predicado foi removido localmente, mantendo remetente e Configuration Set exatos. Schedule e campanha permanecem pausados até deploy e validação sintética da rota. | Gage (@devops) |
 | 2026-09-21 | 2.4 | Correção publicada na PR #40 e implantada por Change Set sem substituição de recurso. O Mailbox Simulator confirmou `SENT` e `DELIVERED` na timeline, duas invocações EventBridge, zero falhas e DLQ vazia. Schedule, campanha e envios reais permanecem bloqueados. | Gage (@devops) |
+| 2026-09-21 | 2.5 | Ativação controlada revelou que o SDK SES v2 com conteúdo Raw exige `ses:SendRawEmail`; a permissão foi adicionada, testada e implantada sem substituição. A validação produtiva confirmou o transporte, mas 2 bounces permanentes e 1 transitório em 14 envios acionaram rollback fail-closed e bloquearam o schedule até higienização da coorte. | Gage (@devops) |
 
 ## Dev Agent Record
 
@@ -220,8 +221,15 @@ Codex / GPT-5
 - Policy engine fail-closed, campanha imutável 0/5/10 e três cursos exatos implementados.
 - Banco fornece trilha append-only, RPCs transacionais, leases, limites, kill switch, controle auditado, outbox Telegram e estados de falha ambígua.
 - Worker AWS/SES e Telegram implementado com privilégio mínimo, concorrência 1, DLQ, alarmes e defaults desativados/dry-run.
+- Papel produtivo reconciliado com o uso real de conteúdo Raw pelo SDK SES v2:
+  `ses:SendEmail` e `ses:SendRawEmail` ficam restritos à identidade e ao
+  Configuration Set aprovados; teste do template impede regressão.
 - API administrativa de status, projeções descritivas, OpenAPI, arquitetura e runbook concluídos.
-- Nenhuma chamada real a SES/Telegram, migration remota de produção, ativação ou merge foi executada nesta story; o único deploy foi a atualização autorizada de `admin-resources` no projeto isolado `site-teste`, e o push autorizado atualizou a PR #30.
+- A implementação original terminou sem chamada real a SES/Telegram. O go-live
+  posterior, em 20–21/09/2026, implantou o orquestrador e executou os pilotos
+  autorizados. Na ativação controlada mais recente, 14 mensagens foram aceitas
+  pelo SES; 2 bounces permanentes e 1 transitório acionaram o rollback
+  fail-closed, mantendo o schedule bloqueado até higienização da coorte.
 - Commit candidato de implementação: `ca426b0` (`feat(sales): add safe reactivation orchestrator`).
 - Correção do gate E2E: `31c217b` (`fix(blog): retry failed autosave safely`).
 - O primeiro gate E2E do SHA `17dba96` identificou drift da Edge Function no

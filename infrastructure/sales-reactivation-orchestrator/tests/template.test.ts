@@ -19,6 +19,31 @@ describe("SAM production safety", () => {
     expect(template).toMatch(/Globals:\n  Function:\n(?:    [^\n]*\n)*    Timeout: 120/);
   });
 
+  it("grants both SES send actions only on the approved identity and configuration set", () => {
+    const policyStart = template.indexOf("PolicyName: OrchestratorRuntimeAccess");
+    const functionStart = template.indexOf("  SalesReactivationFunction:");
+    expect(policyStart).toBeGreaterThanOrEqual(0);
+    expect(functionStart).toBeGreaterThan(policyStart);
+    const policy = template.slice(policyStart, functionStart);
+    const actionIndex = policy.indexOf("- ses:SendEmail");
+    const statementStart = policy.lastIndexOf("              - Effect:", actionIndex);
+    const nextStatement = policy.indexOf("\n              - Effect:", actionIndex);
+    expect(actionIndex).toBeGreaterThanOrEqual(0);
+    expect(statementStart).toBeGreaterThanOrEqual(0);
+    expect(nextStatement).toBeGreaterThan(actionIndex);
+    const sendStatement = policy.slice(statementStart, nextStatement);
+    const normalizedStatement = sendStatement.replace(/^ {14}/gm, "").trim();
+    expect(normalizedStatement).toBe([
+      "- Effect: Allow",
+      "  Action:",
+      "    - ses:SendEmail",
+      "    - ses:SendRawEmail",
+      "  Resource:",
+      "    - !Ref SesIdentityArn",
+      "    - !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:configuration-set/${SesConfigurationSetName}",
+    ].join("\n"));
+  });
+
   it("routes only approved SES events through an authenticated API destination", () => {
     const ruleStart = template.indexOf("  SesEventsRule:");
     const ruleEnd = template.indexOf("  SesEventsDlqPolicy:");
