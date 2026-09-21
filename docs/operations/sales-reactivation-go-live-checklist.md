@@ -1,6 +1,6 @@
 # Checklist de go-live — time autônomo de vendas
 
-Atualizado em 20/09/2026. Este documento é operacional: um item só pode ser
+Atualizado em 21/09/2026. Este documento é operacional: um item só pode ser
 marcado quando houver evidência observável do ambiente correspondente.
 
 ## Estado preparado localmente
@@ -60,15 +60,14 @@ marcado quando houver evidência observável do ambiente correspondente.
   conta permanece ativa para `BOUNCE` e `COMPLAINT`.
 - [x] Estado atual do Configuration Set inspecionado: `rhub-email-events` publica
   via SNS para um endpoint Vercel legado.
-- [ ] Novo caminho SES → EventBridge → API Destination → Cloudflare implantado
-  e autenticado, com DLQs vazias, conexão `AUTHORIZED`, destino `ACTIVE` e
-  alarmes `OK`. O primeiro lote real deixou `TriggeredRules`, `Invocations` e
-  `FailedInvocations` em zero; a principal hipótese é divergência no filtro
-  adicional por `resources`, pois remetente, Configuration Set, região e
-  destino foram confirmados. A correção local
-  preserva os filtros exatos de remetente e Configuration Set e remove somente
-  esse predicado redundante; ainda precisa de deploy e validação sintética antes
-  de habilitar o schedule.
+- [x] Novo caminho SES → EventBridge → API Destination → Cloudflare implantado
+  e autenticado, com DLQ vazia, conexão `AUTHORIZED` e destino `ACTIVE`. Em
+  21/09/2026, a stack foi atualizada removendo somente o predicado redundante
+  `resources`; os filtros exatos de remetente e Configuration Set foram
+  preservados. Um único envio para o Mailbox Simulator oficial do SES produziu
+  dois disparos da regra e duas invocações, sem falha ou envio à DLQ. A timeline
+  do lead sintético registrou `SENT` e `DELIVERED`; o lead foi desativado após o
+  teste e não houve supressão nem notificação terminal.
 - [x] Extensão mínima do papel `rhcursos-email-deployer` aplicada e versionada,
   incluindo tags do Configuration Set e leituras necessárias aos gates SES.
 - [x] ID numérico do chat privado confirmado e teste entregue pelo
@@ -166,10 +165,12 @@ marcado quando houver evidência observável do ambiente correspondente.
   `enabled=false` e `kill_switch=true`, Scheduler `DISABLED`, Lambda em
   `DRY_RUN`, 3.711 sequências ativas, 1 interrompida, 3.707 passos pendentes e 5
   enviados. Nenhum novo e-mail pode sair nesse estado.
-- [ ] Telemetria automática pós-envio: as quatro entregas aparecem somente nas
-  métricas agregadas do SES, pois a regra EventBridge não foi acionada. Não
-  inventar eventos individuais de entrega. Corrigir, implantar e validar a rota
-  antes de qualquer ampliação ou habilitação do schedule.
+- [x] Telemetria automática pós-envio validada em 21/09/2026 com o Mailbox
+  Simulator: `SENT` e `DELIVERED` foram correlacionados automaticamente no CRM,
+  com duas invocações EventBridge, zero falhas e DLQ vazia. As quatro entregas
+  históricas do primeiro lote continuam somente nas métricas agregadas do SES e
+  não serão reconstruídas artificialmente. O schedule permanece `DISABLED` e a
+  campanha pausada; esta validação técnica não autoriza novos envios reais.
 
 ## Ordem obrigatória e autorização vigente
 

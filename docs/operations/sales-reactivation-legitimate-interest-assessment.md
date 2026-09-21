@@ -204,11 +204,14 @@ em 20/09/2026, o SES da região `sa-east-1` informou
 enforcement `HEALTHY`. A autorização comercial explícita foi registrada e o
 primeiro lote manual de cinco mensagens foi executado em 20/09/2026. O SES
 registrou quatro entregas, um bounce e nenhuma complaint; o bounce foi suprimido,
-interrompeu a sequência e gerou alerta no Telegram. A expansão continua
-proibida enquanto a pendência de ingestão automática SES → EventBridge descrita
-no
-[`sales-reactivation-go-live-checklist.md`](sales-reactivation-go-live-checklist.md)
-não for corrigida e validada. Então:
+interrompeu a sequência e gerou alerta no Telegram. Em 21/09/2026, a correção da
+regra EventBridge foi implantada e validada com o Mailbox Simulator oficial do
+SES: `SENT` e `DELIVERED` chegaram automaticamente à timeline, com duas
+invocações, zero falhas e DLQ vazia. A expansão continua proibida por prudência
+operacional e reputacional — o lote inicial teve um bounce em cinco envios — e
+depende dos gates do
+[`sales-reactivation-go-live-checklist.md`](sales-reactivation-go-live-checklist.md).
+Então:
 
 1. confirmar a decisão e o digest; se a liberação ocorrer em ou após
    `2026-10-05T03:40:00Z`, gerar novo plano e nova decisão, sem renovar a
@@ -221,8 +224,9 @@ não for corrigida e validada. Então:
 4. executar dry-run, rejeitar evidência ausente/vencida e revisar os reason codes;
 5. manter o schedule desligado; o único lote manual autorizado já foi encerrado
    após cinco mensagens;
-6. corrigir e validar a ingestão automática de entrega, bounce e complaint;
-   conferir timeline, Telegram e DLQs antes de qualquer expansão;
+6. manter a ingestão automática validada e conferir timeline, Telegram e DLQs
+   antes de qualquer expansão; bounce e complaint continuam sujeitos a novo
+   teste controlado ou ocorrência real, sem provocar evento terminal artificial;
 7. ao encerrar ou vencer o piloto, registrar o evento append-only `UNKNOWN` ou
    `BLOCKED` correspondente antes de considerar uma nova decisão.
 

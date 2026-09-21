@@ -253,6 +253,7 @@ da autorização comercial explícita e da transição controlada para `LIVE`.
 | 2026-09-20 | 0.5 | PRs #35–#38 mescladas com todos os gates verdes; a execução autoritativa final `35493069786`, no SHA `5e953c7`, confirmou 934 testes unitários e 293 SQL. Decisão aplicada a 3.712 contatos e dry-run final concluído; envio permanece bloqueado pelo SES negado/sandbox. | Gage (@devops) |
 | 2026-09-20 | 0.6 | SES liberado para produção (`GRANTED`); nova simulação produtiva `a761ea97-ca9e-4ec9-ab12-169fb537f2b2` confirmou 3.712 elegíveis, 67 rejeitados e zero sequências/tentativas/envios. O primeiro lote continua aguardando autorização explícita de go-live. | Gage (@devops) |
 | 2026-09-20 | 0.7 | Primeiro lote autorizado: 5 enviados, 4 entregues, 1 bounce e 0 complaints. Campanha, controle global e schedule voltaram ao estado pausado. A observação deixou a regra EventBridge sem disparos; a principal hipótese é o filtro `resources`. Correção local pronta e expansão bloqueada até deploy e validação. | Gage (@devops) |
+| 2026-09-21 | 0.8 | Filtro EventBridge corrigido em produção e validado com um único envio ao Mailbox Simulator: `SENT` e `DELIVERED` persistidos automaticamente, duas invocações, zero falhas e DLQ vazia. O registro sintético foi desativado; nenhuma mensagem adicional foi enviada a contatos reais. | Gage (@devops) |
 
 ## Dev Agent Record
 
@@ -311,9 +312,10 @@ Codex (GPT-5)
   tentativas e zero mensagens.
 - PRs #35–#39 foram mescladas; unitários, banco, build, E2E, secret scan,
   CloudFormation e demais gates remotos passaram. O gate SES e o lote manual do
-  AC 8 foram atendidos. A ampliação permanece bloqueada porque o lote revelou
-  zero disparos da regra EventBridge; o bounce foi reconciliado pela supressão
-  autoritativa da conta e a correção local da regra aguarda publicação.
+  AC 8 foram atendidos. A correção da regra está na PR #40 e já foi implantada
+  por Change Set; o simulador confirmou o caminho automático sem falhas. A
+  ampliação permanece bloqueada pela taxa observada de um bounce em cinco envios
+  e exige nova decisão explícita; schedule e campanha continuam pausados.
 
 ### File List
 
