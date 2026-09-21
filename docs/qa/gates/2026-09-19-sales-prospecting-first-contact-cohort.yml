@@ -1,0 +1,36 @@
+schema: 1
+story: '2026-09-19'
+story_title: 'Prospecção inicial da base fornecida por decisão do controlador'
+gate: PASS
+status_reason: 'Os nove critérios estão cobertos e o piloto permaneceu dentro dos guardrails; a expansão comercial continua separada e explicitamente bloqueada.'
+reviewer: 'Quinn (Test Architect)'
+updated: '2026-09-21T16:31:02Z'
+top_issues: []
+waiver:
+  active: false
+quality_score: 100
+evidence:
+  tests_reviewed: 1425
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+    ac_gaps: []
+nfr_validation:
+  security:
+    status: PASS
+    notes: 'Exclusões irrenunciáveis, segredo server-side, service role e ausência de PII nos relatórios foram verificados.'
+  performance:
+    status: PASS
+    notes: 'Lote, janela, quota SES e budgets de desempenho são explícitos e continuam limitados.'
+  reliability:
+    status: PASS
+    notes: 'Digest, idempotência, campanha isolada, kill switch, alarmes e DLQs protegem contra repetição e mistura de coortes.'
+  maintainability:
+    status: PASS
+    notes: 'CLI, migrations, worker, API, OpenAPI, testes e runbooks preservam uma única fonte operacional.'
+recommendations:
+  immediate: []
+  future:
+    - action: 'Manter o schedule e a campanha pausados até decisão humana sobre reputação após o piloto.'
+      refs: ['docs/operations/sales-reactivation-go-live-checklist.md']
+      suggested_owner: 'po'

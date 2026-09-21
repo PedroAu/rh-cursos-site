@@ -59,9 +59,10 @@ transparente e interrompível sem exigir prova individual de relação anterior.
 - A campanha desta story é separada da reativação `reactivation-v1`: ela possui
   somente o passo inicial. Nenhum follow-up é criado automaticamente para quem
   não responder.
-- O SES ainda está em sandbox. A implementação, aprovação por coorte e dry-run
-  podem ser concluídos, mas a ação externa permanece bloqueada até
-  `ProductionAccessEnabled=true` em `sa-east-1`.
+- O SES estava em sandbox durante a implementação. Em 20/09/2026, a revisão do
+  caso foi concedida e o estado autoritativo passou a
+  `ProductionAccessEnabled=true` em `sa-east-1`; o primeiro lote permanece
+  separado e exige autorização explícita de go-live.
 
 ## Acceptance Criteria
 
@@ -95,9 +96,11 @@ transparente e interrompível sem exigir prova individual de relação anterior.
    (ARC-01, ARC-02)
 6. **Ativação continua fail-closed:** migration e deploy mantêm campanha
    `DISABLED`, schedule `DISABLED`, `RUN_MODE=DRY_RUN`, `enabled=false` e kill
-   switch ligado. O sistema consulta o estado SES e impede envio enquanto a
-   conta estiver em sandbox. Não usar SMTP Locaweb ou outro canal para contornar
-   esse gate. (USR-05, ARC-02)
+   switch ligado. Imediatamente antes do envio, o sistema consulta o estado SES
+   e só permite a transição quando a mesma resposta autoritativa informa
+   `ProductionAccessEnabled=true`, `SendingEnabled=true` e enforcement
+   `HEALTHY`. Não usar SMTP Locaweb ou outro canal para contornar esse gate.
+   (USR-05, ARC-02)
 7. **Dry-run produtivo verificável:** após a decisão da coorte, o dry-run informa
    contatos avaliados, elegíveis e rejeitados por reason code, sem PII e sem
    criar sequência, tentativa ou mensagem. Há duas reconciliações explícitas:
@@ -105,8 +108,10 @@ transparente e interrompível sem exigir prova individual de relação anterior.
    universo ampliado do worker avalia 3.779 registros, com 3.712 elegíveis e 67
    rejeitados. (USR-01–05, ARC-01)
 8. **Primeiro lote após liberação do SES:** quando
-   `ProductionAccessEnabled=true`, a ativação usa a campanha/digest aprovados,
-   limite diário e lote conservadores, janela 08h–18h em
+   `ProductionAccessEnabled=true`, `SendingEnabled=true` e enforcement
+   `HEALTHY` forem confirmados na mesma consulta imediatamente anterior ao envio,
+   e houver autorização comercial explícita, a ativação usa a campanha/digest
+   aprovados, limite diário e lote conservadores, janela 08h–18h em
    `America/Sao_Paulo`, schedule inicialmente desligado e execução manual
    idempotente. Timeline, descadastro, respostas, Telegram, bounces, complaints,
    alarmes e DLQs são conferidos antes de ampliar o lote. (USR-03–05, ARC-02)
@@ -196,8 +201,8 @@ transparente e interrompível sem exigir prova individual de relação anterior.
 
 ### Dependências externas
 
-- A conta SES precisa sair do sandbox em `sa-east-1`; isso não pode ser
-  contornado pela implementação.
+- A saída do sandbox do SES em `sa-east-1` foi confirmada em 20/09/2026, com
+  revisão `GRANTED`, envio habilitado e enforcement saudável.
 - A identidade, DKIM, custom MAIL FROM, SPF/DMARC, webhook de eventos, IMAP e
   Telegram já foram validados nas entregas anteriores.
 
@@ -218,7 +223,7 @@ transparente e interrompível sem exigir prova individual de relação anterior.
 | Misturar reativação e prospecção | Campaign key, purpose, template e claim isolados e versionados |
 | Repetir o primeiro contato | Sequência/idempotency key únicas por lead e campanha |
 | Expor PII em plano ou CI | Somente contagens, reason codes e digest no output |
-| Contornar sandbox/quota | Gate SES autoritativo; nenhum fallback por Locaweb |
+| Contornar quota/reputação | Gate SES autoritativo, limites locais e nenhum fallback por Locaweb |
 
 ## Story Draft Checklist Result
 
@@ -226,7 +231,7 @@ transparente e interrompível sem exigir prova individual de relação anterior.
 
 **Clarity score:** 9/10
 **Major gaps:** nenhum bloqueador de implementação/dry-run; o envio real depende
-exclusivamente da liberação externa do SES.
+da autorização comercial explícita e da transição controlada para `LIVE`.
 
 | Category | Status | Issues |
 | --- | --- | --- |
@@ -245,7 +250,12 @@ exclusivamente da liberação externa do SES.
 | 2026-09-19 | 0.2 | Validação de produto concluída: escopo, conteúdo, critérios de aplicação, exclusões e gates estão claros e testáveis; story aprovada para implementação. | Pax (@po) |
 | 2026-09-19 | 0.3 | Decisão por coorte, campanha isolada, CLI, guardrails SES, testes e documentação implementados e validados para revisão. | Dex (@dev) |
 | 2026-09-20 | 0.4 | Dry-run produtivo identificou filtro indevido por tema; correção passa a abranger toda a base importada elegível e mantém `Gestão de Pessoas` somente como assunto editorial. | Dex (@dev) |
-| 2026-09-20 | 0.5 | PRs #35–#38 mescladas com todos os gates verdes; a execução autoritativa final `35493069786`, no SHA `5e953c7`, confirmou 934 testes unitários e 293 SQL. Decisão aplicada a 3.712 contatos e dry-run final concluído; envio permanece bloqueado pelo SES negado/sandbox. | Gage (@devops) |
+| 2026-09-20 | 0.5 | PRs #35–#38 mescladas com todos os gates verdes; a execução autoritativa daquele ciclo `35493069786`, no SHA `5e953c7`, confirmou 934 testes unitários e 293 SQL. Decisão aplicada a 3.712 contatos e dry-run concluído; envio permanece bloqueado pelo SES negado/sandbox. | Gage (@devops) |
+| 2026-09-20 | 0.6 | SES liberado para produção (`GRANTED`); nova simulação produtiva `a761ea97-ca9e-4ec9-ab12-169fb537f2b2` confirmou 3.712 elegíveis, 67 rejeitados e zero sequências/tentativas/envios. O primeiro lote continua aguardando autorização explícita de go-live. | Gage (@devops) |
+| 2026-09-20 | 0.7 | Primeiro lote autorizado: 5 enviados, 4 entregues, 1 bounce e 0 complaints. Campanha, controle global e schedule voltaram ao estado pausado. A observação deixou a regra EventBridge sem disparos; a principal hipótese é o filtro `resources`. Correção local pronta e expansão bloqueada até deploy e validação. | Gage (@devops) |
+| 2026-09-21 | 0.8 | Filtro EventBridge corrigido em produção e validado com um único envio ao Mailbox Simulator: `SENT` e `DELIVERED` persistidos automaticamente, duas invocações, zero falhas e DLQ vazia. O registro sintético foi desativado; nenhuma mensagem adicional foi enviada a contatos reais. | Gage (@devops) |
+| 2026-09-21 | 0.9 | Corrigido o status administrativo para usar `prospecting-v1`, campanha efetivamente configurada no worker produtivo, mantendo consulta explícita de outras campanhas por parâmetro validado e isolando falhas/alertas pela sequência da campanha. | Dex (@dev) |
+| 2026-09-21 | 1.0 | CLI/worker e API administrativa passaram a compartilhar RPCs service-role para falhas e alertas isolados por campanha; regressão local concluiu com 950 unitários, 314 SQL e 24 testes do worker. | Dex (@dev) |
 
 ## Dev Agent Record
 
@@ -257,7 +267,7 @@ Codex (GPT-5)
 
 - `npm run lint`
 - `npm run typecheck`
-- `npm run test:unit` — 934 testes aprovados na execução autoritativa final.
+- `npm run test:unit` — 934 testes aprovados na execução autoritativa da versão 0.5.
 - `npm run test:db` — 293 testes aprovados, incluindo concorrência.
 - `npm run build:verify`
 - `npm run verify:sales-reactivation`
@@ -265,6 +275,14 @@ Codex (GPT-5)
   fora desta story.
 - `uvx cfn-lint infrastructure/sales-reactivation-orchestrator/template.yaml`
 - `npx secretlint ...`
+- `npx vitest run src/__tests__/app/api/admin-sales-reactivation-status-route.test.ts src/__tests__/features/sales-reactivation-status.test.ts` — 20/20 aprovados.
+- `npm run test:unit -- --reporter=dot` — 950/950 aprovados.
+- `npm run test:db` — 20 arquivos e 306/306 testes aprovados, incluindo
+  isolamento de alertas por campanha e versão.
+- `npm run test:db` — 20 arquivos e 314/314 testes aprovados após cobrir também
+  falhas agregadas por campanha, versões e privilégios service-role.
+- `npm run verify` em `infrastructure/sales-reactivation-orchestrator` — 24/24
+  testes, typecheck, bundle e smoke de carregamento aprovados.
 - `coderabbit review --agent -t uncommitted` — 0 crítico/alto; achados menores
   e triviais corrigidos antes do commit.
 - PR #35: CI `35485352733` iniciou em `2026-09-20T02:58:14Z` sobre o SHA
@@ -275,6 +293,11 @@ Codex (GPT-5)
   `a508303`; merge `27dc005` em `2026-09-20T03:54:59Z`.
 - PR #38: CI `35493069786` iniciou em `2026-09-20T06:00:03Z` sobre o SHA
   `5e953c7`; merge `e462e2a` em `2026-09-20T06:16:19Z`.
+- PR #39: CI `35503547979` iniciou em `2026-09-20T09:53:33Z` sobre o SHA
+  `dcd75aa`; Static Checks, Unit Tests, Build & A11y, API Docs, Performance
+  Budgets, Secret Scanning, DB Tests e E2E isolado passaram; merge
+  `3024b0485f43c6293c28e8aeb5352e110ba794bc` em
+  `2026-09-20T16:51:23Z`.
 
 ### Completion Notes List
 
@@ -285,17 +308,35 @@ Codex (GPT-5)
 - Supressão, oposição, e-mail inválido, exclusão, bounce e complaint continuam
   fail-closed. A prospecção aprovada não exige comprovação individual de
   inatividade, conforme decisão do controlador.
-- Worker consulta `ses:GetAccount` antes de qualquer execução `LIVE`; SES segue
-  em sandbox, saudável, com cota 200/dia e 1/s. Nenhum envio real ocorreu.
+- Worker consulta `ses:GetAccount` antes de qualquer execução `LIVE`; SES está
+  liberado e saudável, com cota de 50.000/dia e 14/s. O primeiro lote autorizado
+  enviou exatamente 5 mensagens para a coorte importada: 4 entregas, 1 bounce e
+  nenhuma complaint. A mensagem técnica anterior para a própria caixa não faz
+  parte desses cinco envios.
 - O plano da decisão de coorte `e03171df-5180-43f4-a948-d45f226d734a`
   reconciliou 3.758 contatos importados: aplicou 3.712 eventos `APPROVED` e
   excluiu 46, com digest e expiração em `2026-10-05T03:40:00Z`.
-- Separadamente, o dry-run final do worker avaliou 3.779 registros do CRM,
-  confirmou 3.712 elegíveis, rejeitou 67 e terminou com zero sequências e zero
-  mensagens.
-- PRs #35, #36, #37 e #38 foram mescladas; unitários, banco, build, E2E,
-  secret scan, CloudFormation e demais gates remotos passaram. O item externo do
-  AC 8 continua bloqueado por `ProductionAccessEnabled=false`.
+- Separadamente, o dry-run final do worker, run ID
+  `a761ea97-ca9e-4ec9-ab12-169fb537f2b2`, avaliou 3.779 registros do CRM,
+  confirmou 3.712 elegíveis, rejeitou 67 e terminou com zero sequências, zero
+  tentativas e zero mensagens.
+- PRs #35–#39 foram mescladas; unitários, banco, build, E2E, secret scan,
+  CloudFormation e demais gates remotos passaram. O gate SES e o lote manual do
+  AC 8 foram atendidos. A correção da regra está na PR #40 e já foi implantada
+  por Change Set; o simulador confirmou o caminho automático sem falhas. A
+  ampliação permanece bloqueada pela taxa observada de um bounce em cinco envios
+  e exige nova decisão explícita; schedule e campanha continuam pausados.
+- A API administrativa de status agora consulta `prospecting-v1` por padrão,
+  alinhada ao `CAMPAIGN_KEY` da Lambda produtiva. Administradores ainda podem
+  consultar `reactivation-v1` explicitamente; chaves fora do contrato são
+  rejeitadas antes da consulta de status da campanha.
+- Contadores de falhas e alertas deixaram de misturar campanhas: API e CLI/worker
+  usam os mesmos agregados service-role, correlacionados às sequências de todas
+  as versões da chave selecionada. A migration permanece pendente em produção
+  até o deploy autorizado após o merge da PR #40. A ordem é obrigatória:
+  aplicar/verificar a migration e privilégios primeiro; somente depois implantar
+  frontend e Lambda. O deploy do Lambda continua separado por Change Set, em
+  `DRY_RUN`, com schedule desligado; ausência dos RPCs bloqueia os consumidores.
 
 ### File List
 
@@ -304,6 +345,9 @@ Codex (GPT-5)
 - `docs/operations/sales-reactivation-go-live-checklist.md`
 - `docs/operations/sales-reactivation-legitimate-interest-assessment.md`
 - `docs/operations/sales-reactivation-orchestrator.md`
+- `docs/api/openapi.yaml`
+- `public/api-docs.html`
+- `app/api/admin/sales/reactivation/status/route.ts`
 - `infrastructure/sales-reactivation-orchestrator/README.md`
 - `infrastructure/sales-reactivation-orchestrator/src/orchestrator.ts`
 - `infrastructure/sales-reactivation-orchestrator/src/ses-email-sender.ts`
@@ -312,15 +356,52 @@ Codex (GPT-5)
 - `infrastructure/sales-reactivation-orchestrator/template.yaml`
 - `infrastructure/sales-reactivation-orchestrator/tests/config-and-ses.test.ts`
 - `infrastructure/sales-reactivation-orchestrator/tests/orchestrator.test.ts`
+- `infrastructure/sales-reactivation-orchestrator/tests/store.test.ts`
 - `infrastructure/sales-reactivation-orchestrator/tests/template.test.ts`
 - `package.json`
 - `scripts/approve-sales-prospecting-cohort.d.mts`
 - `scripts/approve-sales-prospecting-cohort.mjs`
 - `src/__tests__/features/sales-reactivation-core.test.ts`
+- `src/__tests__/app/api/admin-sales-reactivation-status-route.test.ts`
+- `src/__tests__/features/sales-reactivation-status.test.ts`
 - `src/__tests__/scripts/sales-prospecting-cohort.test.ts`
 - `src/features/sales/reactivation/policy.ts`
+- `src/features/sales/reactivation/status.ts`
 - `src/features/sales/reactivation/templates.ts`
 - `src/features/sales/reactivation/types.ts`
+- `src/lib/supabase/database.types.ts`
 - `supabase/migrations/20260919230000_sales_prospecting_first_contact.sql`
+- `supabase/migrations/20260921143000_scope_sales_status_notifications.sql`
+- `supabase/tests/database/sales-campaign-status-notifications.test.sql`
 - `supabase/tests/database/sales-prospecting-first-contact.test.sql`
 - `supabase/tests/database/sales-reactivation-orchestrator.test.sql`
+
+## QA Results
+
+### Revisão final de QA — 2026-09-21
+
+**Revisado por:** Quinn (Test Architect)
+
+**Decisão:** PASS para merge. Os nove critérios de aceitação estão cobertos por
+evidência automatizada e operacional: decisão por coorte append-only, exclusões
+fail-closed, isolamento de campanha, gate SES, dry-run produtivo reconciliado,
+lote manual autorizado, telemetria automática e rollback seguro.
+
+- A PR #40 foi revisada contra `origin/main`; os dois achados iniciais do
+  CodeRabbit foram corrigidos e a repetição terminou com zero achados.
+- O status administrativo e o worker usam agregados service-role isolados pela
+  campanha selecionada; tipos inválidos, contagens ausentes e campanha
+  incompatível falham de forma segura.
+- Evidência local vigente: lint, typecheck, build verificável, 951 testes
+  unitários e 24 testes do worker aprovados. A execução CI da PR aprovou 314
+  testes SQL, E2E isolado, API Docs, secret scan, acessibilidade e performance.
+- A produção permanece protegida: campanha pausada, controle desabilitado, kill
+  switch ligado, Lambda em `DRY_RUN` e schedule desabilitado.
+- Nenhum requisito autoriza expansão após o piloto de cinco mensagens; a
+  decisão reputacional/comercial permanece um gate humano separado.
+
+**Status recomendado:** Ready for Done após merge autorizado. Aplicar a
+migration de status antes dos consumidores e manter os controles produtivos
+pausados até decisão posterior.
+
+Gate: PASS → docs/qa/gates/2026-09-19-sales-prospecting-first-contact-cohort.yml

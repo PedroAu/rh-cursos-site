@@ -199,6 +199,8 @@ quality_gate_tools:
 | 2026-09-18 | 2.0 | Gate de dependências eliminou alerta crítico com Next.js 16.3.5 e consolidou Sharp 0.35.4 na árvore; lint, typecheck, build e 926 testes unitários foram revalidados. | Gage (@devops) |
 | 2026-09-18 | 2.1 | Seletores E2E da confirmação de inscrição passaram a usar o heading semântico, evitando ambiguidade com o anunciador de rota do Next.js 16.3.5. | Gage (@devops) |
 | 2026-09-18 | 2.2 | A pipeline produtiva passou a exigir dispatch manual para migrations e deploys, preservando a autorização separada entre merge e produção. | Gage (@devops) |
+| 2026-09-20 | 2.3 | O primeiro lote real mostrou zero disparos da regra de eventos apesar da configuração SES ativa; a principal hipótese é divergência no filtro adicional por `resources`. O predicado foi removido localmente, mantendo remetente e Configuration Set exatos. Schedule e campanha permanecem pausados até deploy e validação sintética da rota. | Gage (@devops) |
+| 2026-09-21 | 2.4 | Correção publicada na PR #40 e implantada por Change Set sem substituição de recurso. O Mailbox Simulator confirmou `SENT` e `DELIVERED` na timeline, duas invocações EventBridge, zero falhas e DLQ vazia. Schedule, campanha e envios reais permanecem bloqueados. | Gage (@devops) |
 
 ## Dev Agent Record
 
@@ -243,7 +245,10 @@ Codex / GPT-5
 - O primeiro CI do SHA `fee5de5` passou em todos os gates exceto dois seletores E2E que encontraram, além do título real, o novo anunciador de rota do Next.js 16.3.5. Os seletores agora usam o heading semântico; ambos os casos passaram localmente contra o Supabase isolado.
 - O merge foi identificado como acoplado à pipeline produtiva sem aprovação manual. O grafo continua validando pushes em `main`, mas migrations, Functions e frontend agora exigem `workflow_dispatch`, mantendo o deploy sob autorização explícita e auditável.
 - A unicidade operacional foi comprovada com duas sessões PostgreSQL concorrentes: o advisory lock por e-mail produziu exatamente um `CREATED` e um `EXISTING`, sem duplicar lead, segmento ou evento de permissão.
-- Ativação ainda depende de dry-run na base real, revisão de elegibilidade, ID numérico do chat privado, identidade SES, testes sintéticos e nova autorização explícita.
+- A rota automática SES → EventBridge foi validada em produção com um contato
+  sintético posteriormente desativado. A ampliação ainda depende de nova revisão
+  operacional e reputacional e de autorização explícita; schedule e campanha
+  permanecem pausados.
 
 ### File List
 
@@ -324,3 +329,29 @@ Codex / GPT-5
 - Gate de secrets do Worker: PASS em 2 arquivos/11 testes direcionados; execução contra produção falhou de forma segura somente pelos dois nomes pendentes.
 - `secretlint` nos arquivos novos e `git diff --check`: PASS.
 - Revisão formal de QA e qualquer ação remota/produtiva permanecem pendentes.
+
+### Revisão final de QA — 2026-09-21
+
+**Revisado por:** Quinn (Test Architect)
+
+**Decisão:** PASS. Os 13 critérios de aceitação possuem evidência em testes de
+banco, unitários, integração/worker, E2E isolado e validações produtivas
+fail-closed. A PR #40 contém a reconciliação final do filtro EventBridge e do
+status por campanha; o deploy continua separado do merge.
+
+- CodeRabbit revisou os 19 arquivos contra `origin/main`, apontou dois achados
+  válidos e ambos foram corrigidos. A nova revisão do diff ficou sem achados.
+- O contrato de status agora aceita `positiveReplies` como inteiro não negativo
+  ou `null`, preserva validação dos campos conhecidos e tolera agregados futuros.
+- O teste do template valida explicitamente os limites do recurso
+  `SesEventsRule` antes de inspecionar o filtro.
+- Evidência local vigente: lint, typecheck, build verificável, 951 testes
+  unitários e 24 testes do worker aprovados. A CI anterior da mesma PR também
+  aprovou 314 testes SQL, E2E isolado, segurança, acessibilidade e performance.
+- Segurança, confiabilidade, desempenho e manutenibilidade: PASS. Nenhum achado
+  crítico, alto ou médio permanece.
+
+**Status recomendado:** Ready for Done após merge autorizado e reconciliação da
+fonte oficial. A decisão não autoriza deploy nem novo envio.
+
+Gate: PASS → docs/qa/gates/2026-09-18-sales-reactivation-orchestrator-telegram.yml

@@ -1,0 +1,36 @@
+schema: 1
+story: '2026-09-18'
+story_title: 'Orquestrador seguro de reativação por e-mail e alertas Telegram'
+gate: PASS
+status_reason: 'Os 13 critérios possuem cobertura automatizada e evidência operacional fail-closed; os achados finais foram corrigidos e a revisão repetida ficou limpa.'
+reviewer: 'Quinn (Test Architect)'
+updated: '2026-09-21T16:31:02Z'
+top_issues: []
+waiver:
+  active: false
+quality_score: 100
+evidence:
+  tests_reviewed: 1425
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
+    ac_gaps: []
+nfr_validation:
+  security:
+    status: PASS
+    notes: 'Service role, secrets server-side, policy fail-closed, allowlist Telegram, supressões e kill switches foram verificados.'
+  performance:
+    status: PASS
+    notes: 'Concorrência limitada, claims atômicos, lote conservador e budgets de build/performance passaram.'
+  reliability:
+    status: PASS
+    notes: 'Retries limitados, idempotência, DLQs, alarmes e rollback preservam a operação em falhas.'
+  maintainability:
+    status: PASS
+    notes: 'CLI-first, campanha/versionamento explícitos, testes por camada, OpenAPI e runbooks permanecem alinhados.'
+recommendations:
+  immediate: []
+  future:
+    - action: 'Após o merge autorizado, aplicar a migration de status antes dos consumidores e manter DRY_RUN/schedule desabilitado.'
+      refs: ['docs/operations/sales-reactivation-go-live-checklist.md']
+      suggested_owner: 'devops'

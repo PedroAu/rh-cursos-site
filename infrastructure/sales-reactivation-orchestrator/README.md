@@ -129,9 +129,13 @@ impedindo paralelismo ou envio acidental. Quando a cota permitir, use `1`.
 O deploy cria o Configuration Set, publica os seis eventos aceitos pelo receptor
 (`Send`, `Delivery`, `Open`, `Click`, `Bounce` e `Complaint`) no EventBridge e os
 encaminha ao endpoint Cloudflare usando uma API Destination autenticada. A regra
-é limitada à identidade, ao remetente e ao Configuration Set aprovados, possui
-retry, DLQ retida e alarme. O destino de eventos não envia campanhas; o schedule
-do orquestrador continua `DISABLED` e o runtime continua `DRY_RUN`.
+é limitada ao remetente e ao Configuration Set aprovados, possui retry, DLQ
+retida e alarme. A identidade continua restrita na permissão de envio da função;
+ela não é repetida no padrão EventBridge, evitando que uma variação do ARN em
+`resources` descarte um evento que já satisfaz os filtros exatos de remetente e
+Configuration Set.
+O destino de eventos não envia campanhas; o schedule do orquestrador continua
+`DISABLED` e o runtime continua `DRY_RUN`.
 
 Ao rotacionar `sesEventsWebhookSecret`, atualize primeiro o secret do Cloudflare
 e depois faça uma atualização da stack para a Connection reler a referência

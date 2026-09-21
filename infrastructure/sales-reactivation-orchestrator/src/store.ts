@@ -22,6 +22,14 @@ function dataOrThrow<T>(result: QueryResult<T>, operation: string): T {
   return result.data;
 }
 
+function aggregateCountOrThrow(result: QueryResult<number>, operation: string): number {
+  const count = Number(dataOrThrow(result, operation));
+  if (!Number.isSafeInteger(count) || count < 0) {
+    throw new Error(`${operation} returned an invalid count.`);
+  }
+  return count;
+}
+
 function snakeToCampaign(row: Record<string, unknown>): CampaignRecord {
   return {
     id: String(row.id),
@@ -50,8 +58,8 @@ function isSameLocalDate(left: Date, right: Date, timezone: string): boolean {
 export class SupabaseSalesStore implements SalesStore {
   private readonly client: SupabaseClient;
 
-  constructor(secret: OrchestratorSecret) {
-    this.client = createClient(secret.supabaseUrl, secret.supabaseServiceRoleKey, {
+  constructor(secret: OrchestratorSecret, client?: SupabaseClient) {
+    this.client = client ?? createClient(secret.supabaseUrl, secret.supabaseServiceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
       global: { headers: { "x-client-info": "rh-cursos-sales-reactivation/1.0" } },
     });
@@ -68,8 +76,8 @@ export class SupabaseSalesStore implements SalesStore {
           .eq("status", "SENT").like("lead_email_sequence.campaign_key", `${campaignKey}@%`),
         this.client.from("lead_email_sequence").select("id", { count: "exact", head: true })
           .eq("status", "INTERRUPTED").like("campaign_key", `${campaignKey}@%`),
-        this.client.from("sales_send_attempt").select("id", { count: "exact", head: true }).in("status", ["PERMANENT_FAILED", "AMBIGUOUS"]),
-        this.client.from("sales_notification_outbox").select("id", { count: "exact", head: true }).in("status", ["PENDING", "FAILED"]),
+        this.client.rpc("sales_campaign_failed_attempts", { p_campaign_key: campaignKey }),
+        this.client.rpc("sales_campaign_pending_notifications", { p_campaign_key: campaignKey }),
         this.client.from("lead_interaction").select("occurred_at").eq("event_type", "SENT").gte("occurred_at", new Date(now.getTime() - 48 * 60 * 60 * 1000).toISOString()),
       ]);
 
@@ -108,8 +116,8 @@ export class SupabaseSalesStore implements SalesStore {
       pendingSteps: pendingResult.count ?? 0,
       sentSteps: sentResult.count ?? 0,
       interruptedSequences: interruptedResult.count ?? 0,
-      failedAttempts: failedResult.count ?? 0,
-      pendingNotifications: notificationResult.count ?? 0,
+      failedAttempts: aggregateCountOrThrow(failedResult as QueryResult<number>, "count failed attempts"),
+      pendingNotifications: aggregateCountOrThrow(notificationResult as QueryResult<number>, "count pending notifications"),
     };
   }
 
