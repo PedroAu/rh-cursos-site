@@ -83,6 +83,15 @@ Resources:
     Type: AWS::SES::ConfigurationSet
     Properties:
       Name: !Ref SesConfigurationSetName
+      SuppressionOptions:
+        SuppressedReasons:
+          - BOUNCE
+          - COMPLAINT
+        ValidationOptions:
+          ConditionThreshold:
+            ConditionThresholdEnabled: ENABLED
+            OverallConfidenceThreshold:
+              ConfidenceVerdictThreshold: HIGH
 
   SesEventBridgeDestination:
     Type: AWS::SES::ConfigurationSetEventDestination

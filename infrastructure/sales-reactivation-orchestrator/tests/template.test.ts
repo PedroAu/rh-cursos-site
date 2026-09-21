@@ -60,6 +60,13 @@ describe("SAM production safety", () => {
     expect(rule).toContain("State: ENABLED");
   });
 
+  it("enables high-confidence SES auto validation without dropping bounce and complaint suppression", () => {
+    expect(template).toMatch(
+      /SuppressionOptions:\n\s+SuppressedReasons:\n\s+- BOUNCE\n\s+- COMPLAINT\n\s+ValidationOptions:\n\s+ConditionThreshold:\n\s+ConditionThresholdEnabled: ENABLED\n\s+OverallConfidenceThreshold:\n\s+ConfidenceVerdictThreshold: HIGH/,
+    );
+    expect(template).toContain("          - bounce");
+  });
+
   it("retains failed SES events in a protected DLQ", () => {
     expect(template).toContain("SesEventsDlq:");
     expect(template).toContain("DeletionPolicy: Retain");

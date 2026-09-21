@@ -163,15 +163,48 @@ coorte: oposição/`BLOCKED`, descadastro, complaint, bounce permanente, exclus�
 endereço ausente/inválido e qualquer supressão. Repetir a mesma decisão é
 idempotente; mudança na coorte exige novo plano e digest.
 
+## Higienizacao da coorte antes do envio
+
+Com a campanha pausada, o comando abaixo valida toda sequencia ativa por
+sintaxe, duplicidade normalizada e rota DNS. Dominios inicialmente suspeitos sao
+reconsultados por DNS-over-HTTPS em Cloudflare e Google; uma resposta temporaria
+ou divergente fica como `DNS_INCONCLUSIVE` e nao provoca exclusao automatica.
+O relatorio exibido e somente agregado e nunca imprime enderecos.
+
+```bash
+npm run sales:emails:hygiene -- --campaign-key prospecting-v1@1
+```
+
+O modo `APPLY` exige kill switch ativo, campanha pausada, nenhum envio em curso,
+uma `run key` estavel e confirmacao textual. Antes da escrita, o executor cria
+em diretorio temporario um snapshot de recuperacao sem e-mail em claro. Os
+resultados ficam append-only no CRM; sintaxe invalida, duplicidade e dominio sem
+rota interrompem a sequencia com `EMAIL_HYGIENE_INVALID` e cancelam passos
+pendentes sem fingir um bounce.
+
+```bash
+npm run sales:emails:hygiene -- \
+  --mode apply \
+  --campaign-key prospecting-v1@1 \
+  --run-key hygiene-prospecting-v1-2026-09-21 \
+  --actor sales-email-hygiene \
+  --confirm-apply APPLY_EMAIL_HYGIENE
+```
+
+O Configuration Set `rh-cursos-transactional` usa SES Auto Validation no limiar
+`HIGH`. Assim, as caixas que passam por sintaxe/DNS ainda sao avaliadas pelo SES
+antes da entrega. Uma supressao dessa camada chega pela rota de bounce com o
+subtipo `EmailValidationSuppressed`, interrompe a sequencia e entra na timeline.
+
 ## Primeiro lote
 
 1. Gerar o plano agregado das bases e revisar duplicidades, conflitos, histórico e base legal.
 2. Comparar candidatos com o CRM/event store produtivo; não importar ou reativar por classificação temática.
-3. Aplicar a migração no projeto isolado e repetir pgTAP.
+3. Aplicar a migração no projeto isolado, repetir pgTAP e executar a higienizacao em dry-run.
 4. Implantar Lambda com `ScheduleState=DISABLED`, `RunMode=DRY_RUN` e chat permitido `0`.
 5. Aplicar a decisão de coorte pelo CLI e conferir digest, validade e exclusões.
 6. Executar dry-run, exportar reason codes e revisar a coorte manualmente.
-7. Validar identidade SES, SPF/DKIM/DMARC e Configuration Set.
+7. Validar identidade SES, SPF/DKIM/DMARC, Auto Validation `HIGH` e Configuration Set.
 8. Usar um contato sintético para testar inbox, reply-to Locaweb, descadastro, bounce e Telegram.
 9. Registrar a aprovação do conteúdo, coorte, janela e volume inicial.
 10. Alterar o allowlist do chat para o ID privado confirmado.

@@ -38,6 +38,7 @@ export const safeMetadataSchema = z
     step_index: z.number().int().min(0).max(100).optional(),
     link_url: z.string().url().max(500).optional(),
     bounce_type: z.string().max(80).optional(),
+    bounce_subtype: z.string().max(120).optional(),
     diagnostic_code: z.string().max(240).optional(),
     mail_timestamp: z.string().datetime().optional(),
     imap_uid: z.string().max(120).optional(),

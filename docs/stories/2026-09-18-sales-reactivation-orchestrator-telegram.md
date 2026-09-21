@@ -202,6 +202,7 @@ quality_gate_tools:
 | 2026-09-20 | 2.3 | O primeiro lote real mostrou zero disparos da regra de eventos apesar da configuração SES ativa; a principal hipótese é divergência no filtro adicional por `resources`. O predicado foi removido localmente, mantendo remetente e Configuration Set exatos. Schedule e campanha permanecem pausados até deploy e validação sintética da rota. | Gage (@devops) |
 | 2026-09-21 | 2.4 | Correção publicada na PR #40 e implantada por Change Set sem substituição de recurso. O Mailbox Simulator confirmou `SENT` e `DELIVERED` na timeline, duas invocações EventBridge, zero falhas e DLQ vazia. Schedule, campanha e envios reais permanecem bloqueados. | Gage (@devops) |
 | 2026-09-21 | 2.5 | Ativação controlada revelou que o SDK SES v2 com conteúdo Raw exige `ses:SendRawEmail`; a permissão foi adicionada, testada e implantada sem substituição. A validação produtiva confirmou o transporte, mas 2 bounces permanentes e 1 transitório em 14 envios acionaram rollback fail-closed e bloquearam o schedule até higienização da coorte. | Gage (@devops) |
+| 2026-09-21 | 2.6 | Higienizacao auditavel da coorte e SES Auto Validation `HIGH` adicionados apos o rollback reputacional do primeiro lote. | Dara (@data-engineer) |
 
 ## Dev Agent Record
 
@@ -289,25 +290,33 @@ Codex / GPT-5
 - `scripts/contact-import-plan.d.mts`
 - `scripts/import-contacts.mjs`
 - `scripts/import-contacts.d.mts`
+- `scripts/hygienize-sales-emails.mjs`
+- `scripts/hygienize-sales-emails.d.mts`
 - `scripts/test-db-contact-import-concurrency.mjs`
 - `src/__tests__/app/api/admin-sales-reactivation-status-route.test.ts`
 - `src/__tests__/features/admin-blog.test.tsx`
 - `src/__tests__/features/contact-import-plan.test.ts`
 - `src/__tests__/features/contact-import-execution.test.ts`
+- `src/__tests__/features/lead-timeline-ingestion.test.ts`
 - `src/__tests__/features/sales-reactivation-core.test.ts`
+- `src/__tests__/features/sales-email-hygiene.test.ts`
 - `src/__tests__/features/sales-reactivation-status.test.ts`
 - `src/__tests__/ci/production-workflow.test.ts`
 - `src/__tests__/ci/production-migrations-workflow.test.ts`
 - `src/__tests__/scripts/check-workers-required-secrets.test.ts`
 - `src/__tests__/scripts/configure-e2e-supabase.test.ts`
 - `src/features/admin/blog/admin-blog-editor.tsx`
+- `src/features/admin/leads/timeline/ingestion.ts`
+- `src/features/admin/leads/timeline/model.ts`
 - `src/features/sales/reactivation/*.ts`
 - `src/lib/email/unsubscribe-token-core.ts`
 - `src/lib/email/unsubscribe-token.ts`
 - `supabase/migrations/20260918120000_sales_reactivation_orchestrator.sql`
 - `supabase/migrations/20260918130000_contact_import_pipeline.sql`
+- `supabase/migrations/20260921170000_sales_email_hygiene.sql`
 - `supabase/tests/database/sales-reactivation-orchestrator.test.sql`
 - `supabase/tests/database/contact-import-pipeline.test.sql`
+- `supabase/tests/database/sales-email-hygiene.test.sql`
 - `tests/admin-crud.spec.ts`
 - `tests/checkout.e2e.spec.ts`
 - `tests/public-journeys.spec.ts`

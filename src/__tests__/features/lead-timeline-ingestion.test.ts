@@ -63,6 +63,63 @@ describe("timeline ingestion", () => {
     expect(rpc.mock.calls[1][1].p_event_hash).toBe(rpc.mock.calls[0][1].p_event_hash);
   });
 
+  it("registra supressao da validacao automatica como bounce terminal auditavel", async () => {
+    const { client, rpc } = createClient();
+    await ingestSesEvent(client, {
+      id: "eventbridge-validation-1",
+      source: "aws.ses",
+      detail: {
+        eventType: "Bounce",
+        mail: { messageId: "ses-message-1", timestamp: "2026-09-21T10:00:00.000Z", tags: {} },
+        bounce: {
+          timestamp: "2026-09-21T10:00:01.000Z",
+          bounceType: "Permanent",
+          bounceSubType: "EmailValidationSuppressed",
+        },
+      },
+    });
+
+    expect(rpc.mock.calls[0][1]).toMatchObject({
+      p_event_type: "BOUNCED",
+      p_safe_summary: "Endereço bloqueado pela validação automática do Amazon SES.",
+      p_metadata: {
+        provider: "SES",
+        bounce_type: "Permanent",
+        bounce_subtype: "EmailValidationSuppressed",
+      },
+    });
+  });
+
+  it("preserva a idempotencia legada sem envelope quando surge bounce subtype", async () => {
+    const first = createClient();
+    const second = createClient();
+    const base = {
+      eventType: "Bounce" as const,
+      mail: { messageId: "ses-message-1", timestamp: "2026-09-21T10:00:00.000Z", tags: {} },
+      bounce: { timestamp: "2026-09-21T10:00:01.000Z", bounceType: "Permanent" },
+    };
+    await ingestSesEvent(first.client, base);
+    await ingestSesEvent(second.client, {
+      ...base,
+      bounce: { ...base.bounce, bounceSubType: "EmailValidationSuppressed" },
+    });
+    expect(second.rpc.mock.calls[0][1].p_external_event_id).toBe(first.rpc.mock.calls[0][1].p_external_event_id);
+    expect(second.rpc.mock.calls[0][1].p_idempotency_key).toBe(first.rpc.mock.calls[0][1].p_idempotency_key);
+    expect(second.rpc.mock.calls[0][1].p_event_hash).not.toBe(first.rpc.mock.calls[0][1].p_event_hash);
+  });
+
+  it("rejeita detalhes de bounce em outro tipo de evento", async () => {
+    const { client } = createClient();
+    await expect(ingestSesEvent(client, {
+      source: "aws.ses",
+      detail: {
+        eventType: "Delivery",
+        mail: { messageId: "ses-message-1", timestamp: "2026-09-21T10:00:00.000Z", tags: {} },
+        bounce: { bounceSubType: "EmailValidationSuppressed" },
+      },
+    })).rejects.toThrow();
+  });
+
   it("correlaciona resposta IMAP primeiro por In-Reply-To e nunca persiste corpo", async () => {
     const { client, rpc } = createClient();
     await ingestImapEvent(client, {

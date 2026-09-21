@@ -26,8 +26,27 @@ const sesDetailSchema = z.object({
   delivery: z.object({ timestamp: z.string().datetime().optional() }).optional(),
   open: z.object({ timestamp: z.string().datetime().optional() }).optional(),
   click: z.object({ timestamp: z.string().datetime().optional(), link: z.string().url().max(2048).optional() }).optional(),
-  bounce: z.object({ timestamp: z.string().datetime().optional(), bounceType: z.string().max(80).optional() }).optional(),
+  bounce: z.object({
+    timestamp: z.string().datetime().optional(),
+    bounceType: z.string().max(80).optional(),
+    bounceSubType: z.string().max(120).optional(),
+  }).optional(),
   complaint: z.object({ timestamp: z.string().datetime().optional() }).optional(),
+}).superRefine((detail, context) => {
+  if (detail.bounce && detail.eventType !== "Bounce") {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["bounce"],
+      message: "bounce somente e permitido em eventos Bounce",
+    });
+  }
+  if (detail.eventType === "Bounce" && !detail.bounce) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["bounce"],
+      message: "eventos Bounce exigem detalhes de bounce",
+    });
+  }
 });
 
 const sesEnvelopeSchema = z.union([
@@ -236,7 +255,7 @@ export async function ingestSesEvent(client: AdminClient, input: unknown) {
     detail.send?.timestamp ?? detail.delivery?.timestamp ?? detail.open?.timestamp ??
     detail.click?.timestamp ?? detail.bounce?.timestamp ?? detail.complaint?.timestamp ?? detail.mail.timestamp;
   const trackedLink = sanitizeTrackedLink(detail.click?.link);
-  const eventFingerprint = {
+  const legacyEventFingerprint = {
     envelopeId: envelopeId ?? null,
     providerMessageId,
     eventType,
@@ -244,8 +263,12 @@ export async function ingestSesEvent(client: AdminClient, input: unknown) {
     trackedLink: trackedLink ?? null,
     bounceType: detail.bounce?.bounceType ?? null,
   };
+  const eventFingerprint = {
+    ...legacyEventFingerprint,
+    ...(detail.bounce?.bounceSubType ? { bounceSubType: detail.bounce.bounceSubType } : {}),
+  };
   const eventHash = hash(eventFingerprint);
-  const externalEventId = envelopeId ?? eventHash;
+  const externalEventId = envelopeId ?? hash(legacyEventFingerprint);
 
   return persistInteraction(client, {
     leadId: link.lead_id,
@@ -260,7 +283,9 @@ export async function ingestSesEvent(client: AdminClient, input: unknown) {
     causationId: providerMessageId,
     actorId: "amazon-ses",
     actorVersion: "eventbridge-v1",
-    safeSummary: SES_SUMMARY[eventType],
+    safeSummary: detail.eventType === "Bounce" && detail.bounce?.bounceSubType === "EmailValidationSuppressed"
+      ? "Endereço bloqueado pela validação automática do Amazon SES."
+      : SES_SUMMARY[eventType],
     contentRef: `ses://${encodeURIComponent(providerMessageId)}`,
     contentHash: null,
     metadata: {
@@ -268,6 +293,7 @@ export async function ingestSesEvent(client: AdminClient, input: unknown) {
       mail_timestamp: detail.mail.timestamp,
       ...(trackedLink ? { link_url: trackedLink } : {}),
       ...(detail.bounce?.bounceType ? { bounce_type: detail.bounce.bounceType } : {}),
+      ...(detail.bounce?.bounceSubType ? { bounce_subtype: detail.bounce.bounceSubType } : {}),
     },
     idempotencyKey: `ses:${externalEventId}`,
     eventHash,
