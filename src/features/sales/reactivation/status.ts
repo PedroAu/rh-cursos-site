@@ -119,11 +119,11 @@ const metricsSchema = z.object({
   rejectedByReason: z.record(z.string(), z.number().int().nonnegative()),
   events: z.record(z.string(), z.number().int().nonnegative()),
   sentByStep: z.record(z.string(), z.number().int().nonnegative()),
-  positiveReplies: z.null(),
+  positiveReplies: z.number().int().nonnegative().nullable(),
   positiveReplyClassificationCoverage: z.number().min(0).max(1),
   interruptedSequences: z.number().int().nonnegative(),
   toolFailures: z.number().int().nonnegative(),
-}).strict();
+});
 
 function parseResult<T>(
   result: SalesStatusQueryResult,

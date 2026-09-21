@@ -329,3 +329,29 @@ Codex / GPT-5
 - Gate de secrets do Worker: PASS em 2 arquivos/11 testes direcionados; execução contra produção falhou de forma segura somente pelos dois nomes pendentes.
 - `secretlint` nos arquivos novos e `git diff --check`: PASS.
 - Revisão formal de QA e qualquer ação remota/produtiva permanecem pendentes.
+
+### Revisão final de QA — 2026-09-21
+
+**Revisado por:** Quinn (Test Architect)
+
+**Decisão:** PASS. Os 13 critérios de aceitação possuem evidência em testes de
+banco, unitários, integração/worker, E2E isolado e validações produtivas
+fail-closed. A PR #40 contém a reconciliação final do filtro EventBridge e do
+status por campanha; o deploy continua separado do merge.
+
+- CodeRabbit revisou os 19 arquivos contra `origin/main`, apontou dois achados
+  válidos e ambos foram corrigidos. A nova revisão do diff ficou sem achados.
+- O contrato de status agora aceita `positiveReplies` como inteiro não negativo
+  ou `null`, preserva validação dos campos conhecidos e tolera agregados futuros.
+- O teste do template valida explicitamente os limites do recurso
+  `SesEventsRule` antes de inspecionar o filtro.
+- Evidência local vigente: lint, typecheck, build verificável, 951 testes
+  unitários e 24 testes do worker aprovados. A CI anterior da mesma PR também
+  aprovou 314 testes SQL, E2E isolado, segurança, acessibilidade e performance.
+- Segurança, confiabilidade, desempenho e manutenibilidade: PASS. Nenhum achado
+  crítico, alto ou médio permanece.
+
+**Status recomendado:** Ready for Done após merge autorizado e reconciliação da
+fonte oficial. A decisão não autoriza deploy nem novo envio.
+
+Gate: PASS → docs/qa/gates/2026-09-18-sales-reactivation-orchestrator-telegram.yml

@@ -375,3 +375,33 @@ Codex (GPT-5)
 - `supabase/tests/database/sales-campaign-status-notifications.test.sql`
 - `supabase/tests/database/sales-prospecting-first-contact.test.sql`
 - `supabase/tests/database/sales-reactivation-orchestrator.test.sql`
+
+## QA Results
+
+### Revisão final de QA — 2026-09-21
+
+**Revisado por:** Quinn (Test Architect)
+
+**Decisão:** PASS para merge. Os nove critérios de aceitação estão cobertos por
+evidência automatizada e operacional: decisão por coorte append-only, exclusões
+fail-closed, isolamento de campanha, gate SES, dry-run produtivo reconciliado,
+lote manual autorizado, telemetria automática e rollback seguro.
+
+- A PR #40 foi revisada contra `origin/main`; os dois achados iniciais do
+  CodeRabbit foram corrigidos e a repetição terminou com zero achados.
+- O status administrativo e o worker usam agregados service-role isolados pela
+  campanha selecionada; tipos inválidos, contagens ausentes e campanha
+  incompatível falham de forma segura.
+- Evidência local vigente: lint, typecheck, build verificável, 951 testes
+  unitários e 24 testes do worker aprovados. A execução CI da PR aprovou 314
+  testes SQL, E2E isolado, API Docs, secret scan, acessibilidade e performance.
+- A produção permanece protegida: campanha pausada, controle desabilitado, kill
+  switch ligado, Lambda em `DRY_RUN` e schedule desabilitado.
+- Nenhum requisito autoriza expansão após o piloto de cinco mensagens; a
+  decisão reputacional/comercial permanece um gate humano separado.
+
+**Status recomendado:** Ready for Done após merge autorizado. Aplicar a
+migration de status antes dos consumidores e manter os controles produtivos
+pausados até decisão posterior.
+
+Gate: PASS → docs/qa/gates/2026-09-19-sales-prospecting-first-contact-cohort.yml

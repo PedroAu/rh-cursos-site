@@ -20,7 +20,11 @@ describe("SAM production safety", () => {
   });
 
   it("routes only approved SES events through an authenticated API destination", () => {
-    const rule = template.slice(template.indexOf("  SesEventsRule:"), template.indexOf("  SesEventsDlqPolicy:"));
+    const ruleStart = template.indexOf("  SesEventsRule:");
+    const ruleEnd = template.indexOf("  SesEventsDlqPolicy:");
+    expect(ruleStart).toBeGreaterThanOrEqual(0);
+    expect(ruleEnd).toBeGreaterThan(ruleStart);
+    const rule = template.slice(ruleStart, ruleEnd);
     expect(template).toContain("Type: AWS::SES::ConfigurationSetEventDestination");
     expect(template).toContain("Type: AWS::Events::ApiDestination");
     expect(template).toContain("ApiKeyName: x-rh-webhook-secret");

@@ -182,6 +182,23 @@ describe("getReactivationStatus", () => {
     );
   });
 
+  it("aceita classificação positiva futura e ignora agregados aditivos desconhecidos", async () => {
+    const source = createSource({
+      metrics: {
+        ...defaultMetrics,
+        positiveReplies: 4,
+        positiveReplyClassificationCoverage: 0.8,
+        futureAggregate: { value: 1 },
+      },
+    });
+
+    const status = await getReactivationStatus(source);
+
+    expect(status.metrics.positiveReplies).toBe(4);
+    expect(status.metrics.positiveReplyClassificationCoverage).toBe(0.8);
+    expect(status.metrics).not.toHaveProperty("futureAggregate");
+  });
+
   it("rejeita métricas sem o mapa obrigatório de eventos", async () => {
     const { events: _events, ...metricsWithoutEvents } = defaultMetrics;
     const source = createSource({ metrics: metricsWithoutEvents });
