@@ -250,10 +250,11 @@ da autorização comercial explícita e da transição controlada para `LIVE`.
 | 2026-09-19 | 0.2 | Validação de produto concluída: escopo, conteúdo, critérios de aplicação, exclusões e gates estão claros e testáveis; story aprovada para implementação. | Pax (@po) |
 | 2026-09-19 | 0.3 | Decisão por coorte, campanha isolada, CLI, guardrails SES, testes e documentação implementados e validados para revisão. | Dex (@dev) |
 | 2026-09-20 | 0.4 | Dry-run produtivo identificou filtro indevido por tema; correção passa a abranger toda a base importada elegível e mantém `Gestão de Pessoas` somente como assunto editorial. | Dex (@dev) |
-| 2026-09-20 | 0.5 | PRs #35–#38 mescladas com todos os gates verdes; a execução autoritativa final `35493069786`, no SHA `5e953c7`, confirmou 934 testes unitários e 293 SQL. Decisão aplicada a 3.712 contatos e dry-run final concluído; envio permanece bloqueado pelo SES negado/sandbox. | Gage (@devops) |
+| 2026-09-20 | 0.5 | PRs #35–#38 mescladas com todos os gates verdes; a execução autoritativa daquele ciclo `35493069786`, no SHA `5e953c7`, confirmou 934 testes unitários e 293 SQL. Decisão aplicada a 3.712 contatos e dry-run concluído; envio permanece bloqueado pelo SES negado/sandbox. | Gage (@devops) |
 | 2026-09-20 | 0.6 | SES liberado para produção (`GRANTED`); nova simulação produtiva `a761ea97-ca9e-4ec9-ab12-169fb537f2b2` confirmou 3.712 elegíveis, 67 rejeitados e zero sequências/tentativas/envios. O primeiro lote continua aguardando autorização explícita de go-live. | Gage (@devops) |
 | 2026-09-20 | 0.7 | Primeiro lote autorizado: 5 enviados, 4 entregues, 1 bounce e 0 complaints. Campanha, controle global e schedule voltaram ao estado pausado. A observação deixou a regra EventBridge sem disparos; a principal hipótese é o filtro `resources`. Correção local pronta e expansão bloqueada até deploy e validação. | Gage (@devops) |
 | 2026-09-21 | 0.8 | Filtro EventBridge corrigido em produção e validado com um único envio ao Mailbox Simulator: `SENT` e `DELIVERED` persistidos automaticamente, duas invocações, zero falhas e DLQ vazia. O registro sintético foi desativado; nenhuma mensagem adicional foi enviada a contatos reais. | Gage (@devops) |
+| 2026-09-21 | 0.9 | Corrigido o status administrativo para usar `prospecting-v1`, campanha efetivamente configurada no worker produtivo, mantendo consulta explícita de outras campanhas por parâmetro validado e isolando falhas/alertas pela sequência da campanha. | Dex (@dev) |
 
 ## Dev Agent Record
 
@@ -265,7 +266,7 @@ Codex (GPT-5)
 
 - `npm run lint`
 - `npm run typecheck`
-- `npm run test:unit` — 934 testes aprovados na execução autoritativa final.
+- `npm run test:unit` — 934 testes aprovados na execução autoritativa da versão 0.5.
 - `npm run test:db` — 293 testes aprovados, incluindo concorrência.
 - `npm run build:verify`
 - `npm run verify:sales-reactivation`
@@ -273,6 +274,10 @@ Codex (GPT-5)
   fora desta story.
 - `uvx cfn-lint infrastructure/sales-reactivation-orchestrator/template.yaml`
 - `npx secretlint ...`
+- `npx vitest run src/__tests__/app/api/admin-sales-reactivation-status-route.test.ts src/__tests__/features/sales-reactivation-status.test.ts` — 20/20 aprovados.
+- `npm run test:unit -- --reporter=dot` — 950/950 aprovados.
+- `npm run test:db` — 20 arquivos e 306/306 testes aprovados, incluindo
+  isolamento de alertas por campanha e versão.
 - `coderabbit review --agent -t uncommitted` — 0 crítico/alto; achados menores
   e triviais corrigidos antes do commit.
 - PR #35: CI `35485352733` iniciou em `2026-09-20T02:58:14Z` sobre o SHA
@@ -316,6 +321,14 @@ Codex (GPT-5)
   por Change Set; o simulador confirmou o caminho automático sem falhas. A
   ampliação permanece bloqueada pela taxa observada de um bounce em cinco envios
   e exige nova decisão explícita; schedule e campanha continuam pausados.
+- A API administrativa de status agora consulta `prospecting-v1` por padrão,
+  alinhada ao `CAMPAIGN_KEY` da Lambda produtiva. Administradores ainda podem
+  consultar `reactivation-v1` explicitamente; chaves fora do contrato são
+  rejeitadas antes da consulta de status da campanha.
+- Contadores de falhas e alertas deixaram de misturar campanhas: tentativas e
+  notificações são correlacionadas às sequências da chave selecionada. As duas
+  consultas relacionais foram validadas em modo somente leitura contra a
+  produção, sem imprimir PII.
 
 ### File List
 
@@ -324,6 +337,9 @@ Codex (GPT-5)
 - `docs/operations/sales-reactivation-go-live-checklist.md`
 - `docs/operations/sales-reactivation-legitimate-interest-assessment.md`
 - `docs/operations/sales-reactivation-orchestrator.md`
+- `docs/api/openapi.yaml`
+- `public/api-docs.html`
+- `app/api/admin/sales/reactivation/status/route.ts`
 - `infrastructure/sales-reactivation-orchestrator/README.md`
 - `infrastructure/sales-reactivation-orchestrator/src/orchestrator.ts`
 - `infrastructure/sales-reactivation-orchestrator/src/ses-email-sender.ts`
@@ -337,10 +353,16 @@ Codex (GPT-5)
 - `scripts/approve-sales-prospecting-cohort.d.mts`
 - `scripts/approve-sales-prospecting-cohort.mjs`
 - `src/__tests__/features/sales-reactivation-core.test.ts`
+- `src/__tests__/app/api/admin-sales-reactivation-status-route.test.ts`
+- `src/__tests__/features/sales-reactivation-status.test.ts`
 - `src/__tests__/scripts/sales-prospecting-cohort.test.ts`
 - `src/features/sales/reactivation/policy.ts`
+- `src/features/sales/reactivation/status.ts`
 - `src/features/sales/reactivation/templates.ts`
 - `src/features/sales/reactivation/types.ts`
+- `src/lib/supabase/database.types.ts`
 - `supabase/migrations/20260919230000_sales_prospecting_first_contact.sql`
+- `supabase/migrations/20260921143000_scope_sales_status_notifications.sql`
+- `supabase/tests/database/sales-campaign-status-notifications.test.sql`
 - `supabase/tests/database/sales-prospecting-first-contact.test.sql`
 - `supabase/tests/database/sales-reactivation-orchestrator.test.sql`

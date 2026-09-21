@@ -609,13 +609,24 @@ paths:
   /api/admin/sales/reactivation/status:
     get:
       tags: [Sales Automation]
-      summary: Consulta o estado do orquestrador de reativação
+      summary: Consulta o estado do orquestrador comercial
       description: >-
         Read model protegido por sessão administrativa SSR. Expõe campanha,
         kill switches, limites e contadores operacionais, sem segredos ou PII.
+        Sem parâmetro, consulta a campanha produtiva prospecting-v1.
       operationId: getSalesReactivationStatus
       security:
         - supabaseSsrCookies: []
+      parameters:
+        - name: campaignKey
+          in: query
+          required: false
+          description: Chave da campanha; o padrão operacional é prospecting-v1.
+          schema:
+            type: string
+            pattern: '^[a-z0-9][a-z0-9-]{1,119}$'
+            minLength: 2
+            maxLength: 120
       responses:
         '200':
           description: Estado operacional atual
@@ -639,6 +650,9 @@ paths:
                         type: object
                       counters:
                         type: object
+                        description: >-
+                          Contadores correlacionados somente às sequências da
+                          campanha selecionada, inclusive falhas e alertas pendentes.
                       metrics:
                         type: object
                         description: >-
@@ -647,6 +661,7 @@ paths:
                           envios por passo, interrupções, falhas e faixa estimada do
                           custo-base SES. Respostas positivas ficam nulas enquanto
                           não houver classificação explícita.
+        '400': { description: Chave de campanha inválida }
         '401':
           $ref: '#/components/responses/AdminSessionInvalid'
         '403':
@@ -709,7 +724,8 @@ paths:
         '400': { description: JSON inválido }
         '401': { description: Segredo do webhook inválido }
         '413': { description: Corpo acima do limite permitido }
-        '422': { description: Evento inválido, ambíguo ou sem correlação segura }
+        '422':
+          description: "Evento inválido, ambíguo ou sem correlação segura"
         '503': { description: Persistência temporariamente indisponível }
   /api/email/unsubscribe:
     post:

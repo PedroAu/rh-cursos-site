@@ -702,6 +702,10 @@ export type Database = {
       };
     };
     Functions: {
+      sales_campaign_pending_notifications: {
+        Args: { p_campaign_key: string };
+        Returns: number;
+      };
       registrar_inscricao_publica: {
         Args: {
           p_nome_completo: string;
