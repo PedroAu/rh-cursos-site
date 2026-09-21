@@ -199,10 +199,27 @@ marcado quando houver evidência observável do ambiente correspondente.
   campanha `PAUSED`, controle `enabled=false`, kill switch ligado, 3.707 passos
   pendentes, 5 enviados, 1 sequência interrompida pelo bounce já documentado,
   zero tentativas com estado `FAILED` e zero notificações pendentes.
-- [ ] Próxima liberação comercial decidida após revisão do piloto. O lote teve
-  um bounce em cinco envios; até haver decisão explícita sobre novo lote ou
-  schedule, preservar campanha `PAUSED`, controle `enabled=false` com kill
-  switch ligado, Scheduler `DISABLED` e Lambda em `DRY_RUN`.
+- [x] Nova liberação comercial solicitada explicitamente em 21/09/2026. O
+  rollout começou com schedule desligado e lote manual de cinco. Ao habilitar o
+  primeiro ciclo automático, a Lambda revelou ausência de
+  `ses:SendRawEmail` no papel de execução; os cinco envios desse ciclo foram
+  recusados antes da entrega externa e o kill switch foi acionado.
+- [x] Permissão `ses:SendRawEmail` adicionada ao template SAM com teste de
+  regressão e implantada por Change Set sem substituição de recurso. Os cinco
+  passos afetados foram devolvidos à fila, preservando as tentativas recusadas
+  no histórico. A própria Lambda produtiva confirmou a correção com envios
+  aceitos pelo SES.
+- [x] Gate reputacional após a correção: 14 mensagens reais foram aceitas nessa
+  janela; no retrato de encerramento havia 7 entregas, 2 bounces permanentes, 1
+  bounce transitório, zero complaints e 4 confirmações ainda pendentes. Os três
+  bounces foram correlacionados, suprimidos e alertados no Telegram. A taxa
+  observada é incompatível com ativação contínua da base sem higienização.
+- [x] Rollback fail-closed concluído após o gate reputacional: campanha
+  `PAUSED`, controle `enabled=false` com kill switch ligado, Scheduler
+  `DISABLED`, Lambda em `DRY_RUN`, alarmes `OK`, DLQs vazias e outbox zerada.
+- [ ] Antes de uma nova ativação, validar/higienizar os endereços da coorte e
+  definir um critério de bounce aceitável. Preservar todas as supressões e não
+  reativar automaticamente os contatos interrompidos.
 
 ## Ordem obrigatória e autorização vigente
 

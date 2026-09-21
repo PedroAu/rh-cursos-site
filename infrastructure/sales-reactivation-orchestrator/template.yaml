@@ -251,8 +251,11 @@ Resources:
               - Effect: Allow
                 Action: secretsmanager:GetSecretValue
                 Resource: !Ref OrchestratorSecretArn
+              # SES v2 authorizes the requested sending identity and Configuration Set.
               - Effect: Allow
-                Action: ses:SendEmail
+                Action:
+                  - ses:SendEmail
+                  - ses:SendRawEmail
                 Resource:
                   - !Ref SesIdentityArn
                   - !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:configuration-set/${SesConfigurationSetName}
